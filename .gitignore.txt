@@ -1,0 +1,23 @@
+gitignore
+# Ignore the Local directory in repository root
+/Local/
+
+# Ignore the Lib directory in repository root
+/Lib/
+
+# Ignore all Temp directories
+Temp/
+
+# Ignore compiled shader/object files
+*.cso
+*.obj
+
+# Ignore generated build/project files
+Makefile
+*.sln
+.vs/
+
+# Ignore Bin directories in repository root
+/Bin/
+/bin/
+
