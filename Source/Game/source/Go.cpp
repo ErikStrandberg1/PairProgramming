@@ -42,6 +42,18 @@ enum class ShadingMode
 	DebugEmissive
 };
 
+struct PostProcessBufferData
+{
+	Vector3f tint = { 1.f, 1.f, 1.f };
+	float exposure = 0.f;
+	Vector3f contrast = { 1.f, 1.f, 1.f };
+	float saturation = 1.f;
+	Vector3f blackPoint = { 0.f, 0.f, 0.f };
+	float bloomBlending = 0.35f;
+	float bloomStrength = 0.15f;
+	float padding[3] = {};
+};
+
 struct RenderData
 {
 	bool enablePointLights = true;
@@ -51,7 +63,6 @@ struct RenderData
 
 	DepthBuffer myIntermediateDepth;
 	RenderTarget myIntermediateTexture;
-	RenderTarget myDownsampledTexture;
 
 	std::vector<std::shared_ptr<ModelInstance>> myDeferredModels;
 	std::vector<std::shared_ptr<ModelInstance>> myModels;
@@ -69,6 +80,20 @@ struct RenderData
 	ModelShader debugMetalnessShader;
 	ModelShader debugAmbientOcclusionShader;
 	ModelShader debugEmissiveShader;
+
+	static constexpr int BloomLevels = 5; // 1/32
+
+	bool enableBloom = true;
+	PostProcessBufferData postProcessData;
+
+	RenderTarget myBloomTextures[BloomLevels];
+
+	FullscreenEffect myDownsampleEffect;
+	FullscreenEffect myUpsampleEffect;
+	FullscreenEffect myColorGradeTonemapEffect;
+	FullscreenEffect myBloomCompositeEffect;
+
+	ComPtr<ID3D11Buffer> myPostProcessBuffer;
 };
 
 void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
@@ -80,7 +105,11 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 
 	renderData.myIntermediateTexture.Clear();
 	renderData.myIntermediateDepth.Clear();
-	renderData.myDownsampledTexture.Clear();
+
+	for (RenderTarget& bloomTexture : renderData.myBloomTextures)
+	{
+		bloomTexture.Clear();
+	}
 
 	////////////////////////////////////////////////////////////////////////////////
 	//// Update Camera
@@ -123,7 +152,6 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 	renderData.myIntermediateTexture.SetAsActiveTarget(&renderData.myIntermediateDepth);
 
 
-
 	for (auto& modelInstance : renderData.myModels)
 	{
 		switch (renderData.shadingMode)
@@ -155,7 +183,6 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 		case ShadingMode::DebugEmissive:
 			graphicsEngine.GetModelDrawer().Draw(*modelInstance, renderData.debugEmissiveShader);
 			break;
-
 		};
 	}
 	graphicsStateStack.Pop();
@@ -167,48 +194,86 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 		batch.Draw(renderData.mySpriteInstanceData);
 	}
 
+	// Map, write, unmap. same pattern as the frame/camera/light buffers
+	{
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		HRESULT hr = DX11::Context->Map(renderData.myPostProcessBuffer.Get(),
+			0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+		if (SUCCEEDED(hr))
+		{
+			memcpy(mapped.pData, &renderData.postProcessData, sizeof(PostProcessBufferData));
+			DX11::Context->Unmap(renderData.myPostProcessBuffer.Get(), 0);
+		}
+
+		// Bind to slot 10, must match register(b10) in the HLSL
+		DX11::Context->PSSetConstantBuffers(10, 1,
+			renderData.myPostProcessBuffer.GetAddressOf());
+	}
+
 	////////////////////////////////////////////////////////////////////////////////
+	//// Bloom: downsample chain
 
-	graphicsStateStack.Push();
-	graphicsStateStack.SetBlendState(BlendState::Disabled);
+	if (renderData.enableBloom)
+	{
+		graphicsStateStack.Push();
+		graphicsStateStack.SetBlendState(BlendState::Disabled);
 
-	renderData.myDownsampledTexture.SetAsActiveTarget();
-	renderData.myIntermediateTexture.SetAsResourceOnSlot(1);
-	
-	graphicsEngine.GetFullscreenEffectDownsample().Render();
+		for (int i = 0; i < RenderData::BloomLevels; ++i)
+		{
+			renderData.myBloomTextures[i].SetAsActiveTarget();
 
-	graphicsStateStack.Pop();
-	 
+			if (i == 0)
+				renderData.myIntermediateTexture.SetAsResourceOnSlot(1);
+			else
+				renderData.myBloomTextures[i - 1].SetAsResourceOnSlot(1);
+
+			renderData.myDownsampleEffect.Render();
+		}
+
+		////////////////////////////////////////////////////////////////////////////////
+			//// Bloom: upsample chain (blends back down into the sharper levels)
+
+		graphicsStateStack.SetBlendState(BlendState::AlphaBlend);
+
+		for (int i = RenderData::BloomLevels - 1; i > 0; --i)
+		{
+			renderData.myBloomTextures[i - 1].SetAsActiveTarget();
+			renderData.myBloomTextures[i].SetAsResourceOnSlot(1);
+			renderData.myUpsampleEffect.Render();
+		}
+
+		graphicsStateStack.Pop();
+	}
 
 	////////////////////////////////////////////////////////////////////////////////
+	//// Color adjustments + tonemapping to the backbuffer
 
 	graphicsStateStack.Push();
 	graphicsStateStack.SetBlendState(BlendState::Disabled);
 
 	DX11::BackBuffer->SetAsActiveTarget();
-
 	renderData.myIntermediateTexture.SetAsResourceOnSlot(1);
-
-	graphicsEngine.GetFullscreenEffectTonemap().Render();
+	renderData.myColorGradeTonemapEffect.Render();
 
 	graphicsStateStack.Pop();
-
 
 	////////////////////////////////////////////////////////////////////////////////
+	//// Add the bloom on top
 
-	graphicsStateStack.Push();
-	graphicsStateStack.SetBlendState(BlendState::AdditiveBlend);
+	if (renderData.enableBloom)
+	{
+		graphicsStateStack.Push();
+		graphicsStateStack.SetBlendState(BlendState::AlphaBlend);
 
-	DX11::BackBuffer->SetAsActiveTarget();
+		DX11::BackBuffer->SetAsActiveTarget();
+		renderData.myBloomTextures[0].SetAsResourceOnSlot(1);
+		renderData.myBloomCompositeEffect.Render();
 
-	renderData.myDownsampledTexture.SetAsResourceOnSlot(1);
-	graphicsEngine.GetFullscreenEffectUpsampleAndScaleBloom().Render();
-
-	graphicsStateStack.Pop();
+		graphicsStateStack.Pop();
+	}
 }
 
 void Go(void);
-
 
 
 Tga::InputManager* SInputManager;
@@ -249,15 +314,47 @@ void Go(void)
 		bool bShouldRun = true;
 
 		Vector2ui halfResolution = {
-	resolution.x / 2,
-	resolution.y / 2
+			resolution.x / 2,
+			resolution.y / 2
 		};
 
 		RenderData renderData;
 		{
 			renderData.myIntermediateDepth = DepthBuffer::Create(DX11::GetResolution());
-			renderData.myIntermediateTexture = RenderTarget::Create(DX11::GetResolution(), DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT);
-			renderData.myDownsampledTexture = RenderTarget::Create(halfResolution, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT);
+			renderData.myIntermediateTexture = RenderTarget::Create(DX11::GetResolution(),
+				DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT);
+		}
+
+		Vector2ui bloomRes = DX11::GetResolution();
+		for (int i = 0; i < RenderData::BloomLevels; ++i)
+		{
+			bloomRes.x = std::max(1u, bloomRes.x / 2);
+			bloomRes.y = std::max(1u, bloomRes.y / 2);
+			renderData.myBloomTextures[i] =
+				RenderTarget::Create(bloomRes, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT);
+		}
+
+		//init postprocess effects
+		if (!renderData.myDownsampleEffect.Init("Shaders/PostProcessDownSamplePS"))
+			ERROR_PRINT("Failed to init PostProcessDownSamplePS!");
+		if (!renderData.myUpsampleEffect.Init("Shaders/PostprocessUpsamplePS"))
+			ERROR_PRINT("Failed to init PostprocessUpsamplePS!");
+		if (!renderData.myColorGradeTonemapEffect.Init("Shaders/PostProcessToneMapPS"))
+			ERROR_PRINT("Failed to init PostProcessToneMapPS!");
+		if (!renderData.myBloomCompositeEffect.Init("Shaders/PostProcessBloomPS"))
+			ERROR_PRINT("Failed to init PostProcessBloomPS!");
+
+		// create CBuffer 
+		{
+			D3D11_BUFFER_DESC bufferDesc = {};
+			bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+			bufferDesc.ByteWidth = sizeof(PostProcessBufferData);
+			bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+			HRESULT hr = DX11::Device->CreateBuffer(&bufferDesc, nullptr,
+				renderData.myPostProcessBuffer.ReleaseAndGetAddressOf());
+			assert(SUCCEEDED(hr));
 		}
 
 		HWND windowHandle = *Tga::Application::GetInstance()->GetHWND();
@@ -270,11 +367,13 @@ void Go(void)
 		renderData.debugPixelNormalShader.Init("Shaders/PbrModelShaderVS", "Shaders/DebugPixelNormalModelShaderPS");
 		renderData.debugRoughnessShader.Init("Shaders/PbrModelShaderVS", "Shaders/DebugRoughnessModelShaderPS");
 		renderData.debugMetalnessShader.Init("Shaders/PbrModelShaderVS", "Shaders/DebugMetalnessModelShaderPS");
-		renderData.debugAmbientOcclusionShader.Init("Shaders/PbrModelShaderVS", "Shaders/DebugAmbientOcclusionModelShaderPS");
+		renderData.debugAmbientOcclusionShader.Init("Shaders/PbrModelShaderVS",
+			"Shaders/DebugAmbientOcclusionModelShaderPS");
 		renderData.debugEmissiveShader.Init("Shaders/PbrModelShaderVS", "Shaders/DebugEmissiveModelShaderPS");
 
 		renderData.mySpriteSharedData = {};
-		renderData.mySpriteSharedData.texture = Tga::GraphicsEngine::GetInstance()->GetTextureManager().GetTexture("sprites/tge_logo_w.dds");
+		renderData.mySpriteSharedData.texture = Tga::GraphicsEngine::GetInstance()->GetTextureManager().GetTexture(
+			"sprites/tge_logo_w.dds");
 
 		renderData.mySpriteInstanceData = {};
 		renderData.mySpriteInstanceData.transform = Matrix4x4f::CreateFromScale({ 100.f, 100.f, 100.f });
@@ -283,37 +382,41 @@ void Go(void)
 		ModelFactory& modelFactory = ModelFactory::GetInstance();
 
 		// TODO: ModelFactory needs to spit out shared ptrs.
-		std::shared_ptr<ModelInstance> mdlPlane = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("Plane"));
+		std::shared_ptr<ModelInstance> mdlPlane = std::make_shared<ModelInstance>(
+			modelFactory.GetModelInstance("Plane"));
 		mdlPlane->GetTransform().Scale({ 10 });
 
 		std::shared_ptr<ModelInstance> mdlCube = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("Cube"));
 		mdlCube->GetTransform().SetPosition({ 0, 50, 400 });
 
-		std::shared_ptr<ModelInstance> mdlCube2 = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("Cube"));
+		std::shared_ptr<ModelInstance> mdlCube2 = std::make_shared<
+			ModelInstance>(modelFactory.GetModelInstance("Cube"));
 		mdlCube2->GetTransform().SetPosition({ -200, 50, 400 });
 
 		// When meshes are loaded, textures are also automatically loaded.
 		// If textures are named the same as the materials in the model (plus _C, _M or _N for different types of textures), they are automatically loaded.
 		//std::shared_ptr<ModelInstance> matball = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("../source/tutorials/Tutorial17PBR/data/TMA_Matball.fbx"));
-		std::shared_ptr<ModelInstance> matball = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("TMA_Matball.fbx"));
+		std::shared_ptr<ModelInstance> matball = std::make_shared<ModelInstance>(
+			modelFactory.GetModelInstance("TMA_Matball.fbx"));
 		matball->GetTransform().SetPosition({ -300, 0, 0 });
 		matball->GetTransform().Rotate(Rotator(0, 80, 0));
 
 		// If textures named the same as materials are not found, textures named the same as the fbx-file itself are loaded:
-		std::shared_ptr<ModelInstance> mdlChest = std::make_shared<ModelInstance>(modelFactory.GetModelInstance("Particle_Chest.fbx"));
+		std::shared_ptr<ModelInstance> mdlChest = std::make_shared<ModelInstance>(
+			modelFactory.GetModelInstance("Particle_Chest.fbx"));
 		mdlChest->GetTransform().SetPosition({ 100, 0, 0 });
 
 		auto dLight = DirectionalLight{
 			Matrix4x4f::CreateFromRollPitchYaw(Rotator(225, -45, 0)),
-			Color{ 1.1f, 0.8f, 0.5f },
+			Color{1.1f, 0.8f, 0.5f},
 			0.1f
 		};
 
-
 		auto aLight = AmbientLight{
-			Color{ 0.3f, 0.5f, 0.6f },
+			Color{0.3f, 0.5f, 0.6f},
 			AmbientLightType::Custom,
-			GraphicsEngine::GetInstance()->GetTextureManager().GetTexture("cube_1024_preblurred_angle3_Skansen3.dds", TextureSrgbMode::None)
+			GraphicsEngine::GetInstance()->GetTextureManager().GetTexture(
+				"cube_1024_preblurred_angle3_Skansen3.dds", TextureSrgbMode::None)
 		};
 
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(Camera());
@@ -365,8 +468,6 @@ void Go(void)
 
 		while (bShouldRun)
 		{
-
-
 			timer.Update();
 			myInputManager.Update();
 
@@ -397,7 +498,8 @@ void Go(void)
 					camMovement += camTransform.GetRight() * 1.0f;
 				}
 
-				camTransform.SetPosition(camera->GetTransform().GetPosition() + camMovement * camSpeed * timer.GetDeltaTime());
+				camTransform.SetPosition(
+					camera->GetTransform().GetPosition() + camMovement * camSpeed * timer.GetDeltaTime());
 
 				const Vector2f mouseDelta = myInputManager.GetMouseDelta();
 
@@ -470,6 +572,28 @@ void Go(void)
 					"Debug Emissive"
 				};
 				ImGui::Combo("Shading Mode", (int*)&renderData.shadingMode, items, IM_ARRAYSIZE(items));
+
+				// post processing controls
+				ImGui::Separator();
+				if (ImGui::CollapsingHeader("Post Processing", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					PostProcessBufferData& pp = renderData.postProcessData;
+
+					ImGui::Checkbox("Enable Bloom", &renderData.enableBloom);
+					ImGui::SliderFloat("Bloom Blending", &pp.bloomBlending, 0.f, 1.f);
+					ImGui::SliderFloat("Bloom Strength", &pp.bloomStrength, 0.f, 2.f);
+
+					ImGui::Separator();
+
+					ImGui::SliderFloat("Exposure", &pp.exposure, -5.f, 5.f);
+					ImGui::SliderFloat("Saturation", &pp.saturation, 0.f, 3.f);
+					ImGui::SliderFloat3("Contrast", &pp.contrast.x, 0.f, 3.f);
+					ImGui::ColorEdit3("Tint", &pp.tint.x);
+					ImGui::SliderFloat3("Black Point", &pp.blackPoint.x, 0.f, 0.5f);
+
+					if (ImGui::Button("Reset"))
+						pp = PostProcessBufferData{};
+				}
 			}
 			ImGui::End();
 

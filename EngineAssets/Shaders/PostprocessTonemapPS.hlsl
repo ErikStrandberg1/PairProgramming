@@ -1,7 +1,7 @@
 #include "PostprocessStructs.hlsli"
 #include "Common.hlsli"
+#include "PostProcessBuffer.hlsli"
 
-// Origin: https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 float3 s_curve(float3 x)
 {
     float a = 2.51f;
@@ -12,10 +12,8 @@ float3 s_curve(float3 x)
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-
 float3 tonemap_s_gamut3_cine(float3 c)
 {
-    // based on Sony's s gamut3 cine
     float3x3 fromSrgb = float3x3(
         +0.6456794776, +0.2591145470, +0.0952059754,
         +0.0875299915, +0.7596995626, +0.1527704459,
@@ -32,10 +30,29 @@ float3 tonemap_s_gamut3_cine(float3 c)
 PostProcessPixelOutput main(PostProcessVertexToPixel input)
 {
     PostProcessPixelOutput returnValue;
-	float3 resource = FullscreenTexture1.Sample(DefaultSampler, input.uv.xy).rgb;
 
-	returnValue.color.rgb = tonemap_s_gamut3_cine(resource);
+    float3 color = FullscreenTexture1.Sample(DefaultSampler, input.uv).rgb;
 
-	returnValue.color.a = 1.0f;
-	return returnValue;
+    // Color grading (before tonemapping)
+    // Saturation
+    float luminance = dot(float3(0.2126f, 0.7152f, 0.0722f), color);
+    color = luminance + PP_Saturation * (color - luminance);
+
+    // Exposure
+    color = exp2(PP_Exposure) * color;
+
+    // Contrast 
+    color = 0.18f * pow(max(color, 0.0001f) / 0.18f, PP_Contrast);
+
+    // Tint
+    color = color * PP_Tint;
+
+    // Black point
+    color = max(0.0f, color - PP_BlackPoint);
+
+    //  Tonemapping 
+    color = tonemap_s_gamut3_cine(color);
+
+    returnValue.color = float4(color, 1.0f);
+    return returnValue;
 }
