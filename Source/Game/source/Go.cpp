@@ -94,6 +94,7 @@ struct RenderData
 	FullscreenEffect myBloomCompositeEffect;
 
 	ComPtr<ID3D11Buffer> myPostProcessBuffer;
+	ComPtr<ID3D11SamplerState> myClampSampler;
 };
 
 void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
@@ -208,6 +209,7 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 		// Bind to slot 10, must match register(b10) in the HLSL
 		DX11::Context->PSSetConstantBuffers(10, 1,
 			renderData.myPostProcessBuffer.GetAddressOf());
+		DX11::Context->PSSetSamplers(0, 1, renderData.myClampSampler.GetAddressOf());
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -354,6 +356,18 @@ void Go(void)
 
 			HRESULT hr = DX11::Device->CreateBuffer(&bufferDesc, nullptr,
 				renderData.myPostProcessBuffer.ReleaseAndGetAddressOf());
+			assert(SUCCEEDED(hr));
+		}
+		{
+			D3D11_SAMPLER_DESC sd = {};
+			sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			sd.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+			sd.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+			sd.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+			sd.MinLOD = 0;
+			sd.MaxLOD = D3D11_FLOAT32_MAX;
+			HRESULT hr = DX11::Device->CreateSamplerState(
+				&sd, renderData.myClampSampler.ReleaseAndGetAddressOf());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -555,24 +569,6 @@ void Go(void)
 
 			if (ImGui::Begin("Settings"))
 			{
-				ImGui::Checkbox("Enable Directional Light", &renderData.enableDirectionalLight);
-				ImGui::Checkbox("Enable Ambient Light", &renderData.enableAmbientLight);
-				ImGui::Checkbox("Enable Point Lights", &renderData.enablePointLights);
-
-				static const char* items[]
-				{
-					"Unlit",
-					"Lambert",
-					"PBR",
-					"Debug Vertex Normal",
-					"Debug Pixel Normal",
-					"Debug Roughness",
-					"Debug Metalness",
-					"Debug Ambient Occlusion",
-					"Debug Emissive"
-				};
-				ImGui::Combo("Shading Mode", (int*)&renderData.shadingMode, items, IM_ARRAYSIZE(items));
-
 				// post processing controls
 				ImGui::Separator();
 				if (ImGui::CollapsingHeader("Post Processing", ImGuiTreeNodeFlags_DefaultOpen))
@@ -594,6 +590,26 @@ void Go(void)
 					if (ImGui::Button("Reset"))
 						pp = PostProcessBufferData{};
 				}
+
+				ImGui::Checkbox("Enable Directional Light", &renderData.enableDirectionalLight);
+				ImGui::Checkbox("Enable Ambient Light", &renderData.enableAmbientLight);
+				ImGui::Checkbox("Enable Point Lights", &renderData.enablePointLights);
+
+				static const char* items[]
+				{
+					"Unlit",
+					"Lambert",
+					"PBR",
+					"Debug Vertex Normal",
+					"Debug Pixel Normal",
+					"Debug Roughness",
+					"Debug Metalness",
+					"Debug Ambient Occlusion",
+					"Debug Emissive"
+				};
+				ImGui::Combo("Shading Mode", (int*)&renderData.shadingMode, items, IM_ARRAYSIZE(items));
+
+
 			}
 			ImGui::End();
 
