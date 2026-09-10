@@ -1,8 +1,0 @@
-{
-    "dependencies": {
-        "Common.hlsli": "2026-09-02T18:01:50Z",
-        "PostProcessBuffer.hlsli": "2026-09-02T19:24:54Z",
-        "PostprocessStructs.hlsli": "2026-09-02T16:41:01Z"
-    },
-    "timestamp": "2026-09-02T19:23:54Z"
-}
