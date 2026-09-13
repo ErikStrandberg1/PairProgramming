@@ -1,7 +1,7 @@
 # Generated directories anywhere in repository
-Local/
-Temp/
-Lib/
+/Local/
+/Temp/
+/Lib/
 
 # Visual Studio
 .vs/
