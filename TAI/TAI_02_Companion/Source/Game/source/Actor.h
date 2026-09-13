@@ -37,10 +37,10 @@ public:
 	void SetPosition(const Tga::Vector2f&);
 
 	AI::Controller* GetController() const { return myController; }
+	Tga::Texture* mySpriteTexture;
 
 private:
 	Tga::Vector2f myPosition;
-	Tga::Texture* mySpriteTexture;
 	Tga::Texture* myShadowTexture;
 	AI::Controller*	myController;
 	float mySpeed;

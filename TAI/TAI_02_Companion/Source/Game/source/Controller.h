@@ -3,6 +3,7 @@
 
 struct UpdateContext;
 struct AIEvent;
+
 namespace AI
 {
 	class PollingStation;
@@ -18,10 +19,14 @@ namespace AI
 	class Controller
 	{
 	public:
-		virtual ~Controller() {};
+		virtual ~Controller()
+		{
+		};
 		virtual Tga::Vector2f Update(const UpdateContext& updateContext, const Tga::Vector2f& aPosition) = 0;
 
-		virtual void OnEvent( [[maybe_unused]]const AIEvent& aEvent){}
+		virtual void OnEvent([[maybe_unused]] const AIEvent& aEvent)
+		{
+		}
 
 	protected:
 		Tga::Vector2f myTargetPosition;

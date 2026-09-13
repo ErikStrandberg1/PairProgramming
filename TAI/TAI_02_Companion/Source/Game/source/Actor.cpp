@@ -53,7 +53,7 @@ void Actor::Render()
 		Tga::Sprite2DInstanceData instanceData = {};
 		instanceData.myPivot = { 0.5f, 0.5f };
 		instanceData.myPosition = myPosition;
-		instanceData.mySize = { 0.1f, 0.1f };
+		instanceData.mySize = { 0.05f, 0.05f };
 
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
@@ -65,7 +65,7 @@ void Actor::Render()
 		instanceData.myPivot = { 0.5f, 0.5f };
 		instanceData.myPosition = myPosition;
 		instanceData.myRotation = myRotation;
-		instanceData.mySize = { 0.1f, 0.1f };
+		instanceData.mySize = { 0.05f, 0.05f };
 
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
@@ -76,7 +76,7 @@ void Actor::Update(const UpdateContext& updateContext)
 	if (myController != nullptr)
 	{
 		Tga::Vector2f direction = myController->Update(updateContext, { myPosition.x, myPosition.y });
-		if (!(direction.x == 0.f && direction.y == 0.f)) // Is not zero vector
+		if (!(direction.x == 0.f && direction.y == 0.f))
 		{
 			direction.Normalize();
 			myPosition += direction * mySpeed * updateContext.deltaTime;

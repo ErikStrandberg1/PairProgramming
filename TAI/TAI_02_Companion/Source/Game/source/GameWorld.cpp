@@ -38,7 +38,7 @@ void GameWorld::Init()
 	auto player = std::make_unique<Actor>();
 	player->Init(
 		"../data/sprites/hacker.png",
-		0.2f,
+		0.3f,
 		myControllerFactory.CreateController(AI::eControllerType::ePlayer),
 		{0.f, 0.5f}
 	);
@@ -50,7 +50,7 @@ void GameWorld::Init()
 	auto enemy1 = std::make_unique<Actor>();
 	enemy1->Init(
 		"../data/sprites/killerRobo2.png",
-		0.14f,
+		0.10f,
 		myControllerFactory.CreateController(AI::eControllerType::eEvent),
 		{.7f, .7f}
 	);
@@ -73,39 +73,54 @@ void GameWorld::Update(const UpdateContext& context)
 void GameWorld::UpdateEnemyPath()
 {
 	if (myNavmesh == nullptr || myPlayer == nullptr || myEnemy == nullptr)
+	{
 		return;
+	}
 
 	const Tga::Vector2f playerNav = ConvertToNavmesh(myPlayer->GetPosition());
 	const Tga::Vector2f enemyNav = ConvertToNavmesh(myEnemy->GetPosition());
 
-	// If the player is off the mesh, aim for the nearest point on a triangle edge.
+	// If the player is off the mesh, aim for the nearest point
 	int goalNode = -1;
 	const Tga::Vector2f goalPos = myNavmesh->GetClosestPointOnMesh(playerNav, goalNode);
 	if (goalNode == -1)
+	{
 		return;
+	}
 
 	int startNode = -1;
 	const Tga::Vector2f startPos = myNavmesh->GetClosestPointOnMesh(enemyNav, startNode);
 	if (startNode == -1)
+	{
 		return;
+	}
 
-	// Only repath when the goal actually moved.
+	// Only repath when the goal actually moved
 	if (goalNode == myLastGoalNode && (goalPos - myLastGoalPos).Length() < 10.f)
+	{
 		return;
+	}
 
 	myLastGoalNode = goalNode;
 	myLastGoalPos = goalPos;
 
 	const std::vector<int> nodePath = myNavmesh->FindPath(startNode, goalNode);
 	if (nodePath.empty())
+	{
 		return;
+	}
 
-	mySmoothPath = myNavmesh->SmoothPath(nodePath, startPos, goalPos);
+	float spriteLength = std::fmax((float)myEnemy->mySpriteTexture->myImageSize.x,
+	                               (float)myEnemy->mySpriteTexture->myImageSize.y);
+	float radius = spriteLength / 2.f;
+	mySmoothPath = myNavmesh->SmoothPath(nodePath, startPos, goalPos, radius);
 
 	AIEvent event{};
 	event.type = AIEvent::Type::PlayerMoved;
 	for (const Tga::Vector2f& point : mySmoothPath)
+	{
 		event.pathPositions.push_back(ConvertToPos(point));
+	}
 
 	AIEventManager::GetInstance().SendEvent(event);
 }
@@ -115,23 +130,7 @@ void GameWorld::Render()
 	const auto& engine = *Tga::Engine::GetInstance();
 	Tga::DebugDrawer& debugDrawer = engine.GetDebugDrawer();
 
-
-	//Tga::SpriteDrawer& spriteDrawer(engine.GetGraphicsEngine().GetSpriteDrawer());
-
-	//{
-	//    Tga::SpriteSharedData sharedData = {};
-	//    sharedData.myTexture = myBackgroundTexture;
-
-	//    Tga::Sprite2DInstanceData instanceData = {};
-	//    instanceData.myPivot = { 0.0f, 1.0f };
-	//    instanceData.myPosition = { 0.0f, 0.0f };
-	//    instanceData.mySize = { 1.0f, 1.0f };
-
-	//    spriteDrawer.Draw(sharedData, instanceData);
-	//}
-
 	myNavmesh->RenderNavmesh(debugDrawer);
-	myNavmesh->RenderConnections(debugDrawer);
 
 	for (int i = 0; i + 1 < (int)mySmoothPath.size(); ++i)
 	{
@@ -139,8 +138,6 @@ void GameWorld::Render()
 		debugDrawer.DrawCircle(mySmoothPath[i], 4.f, Tga::Color(1.f, 0.5f, 0.f, 1.f));
 	}
 
-	//AI
-	Tga::Vector2f resolution = Tga::Vector2f((float)Tga::DX11::GetResolution().x, (float)Tga::DX11::GetResolution().y);
 	myScreenMin = {0.f, 0.f};
 	myScreenMax = {1.0f, 1.0f};
 
