@@ -33,3 +33,10 @@ Debug/
 Release/
 x64/
 x86/
+
+
+# Generated files inside Bin
+**/Bin/**/*.cso
+**/Bin/**/*.json
+**/Bin/*_Debug.lib
+**/Bin/*_Debug.exe
