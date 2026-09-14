@@ -2,6 +2,7 @@
 #include <tge/render/RenderCommon.h>
 #include <tge/graphics/PointLight.h>
 #include <tge/graphics/DirectionalLight.h>
+#include <tge/graphics/SpotLight.h>
 #include <tge/graphics/AmbientLight.h>
 #include <tge/graphics/Camera.h>
 #include <tge/EngineDefines.h>
@@ -38,6 +39,7 @@ namespace Tga
 			PointLight pointLights[NUMBER_OF_LIGHTS_ALLOWED];
 			DirectionalLight directionalLight;
 			AmbientLight ambientLight;
+			SpotLight spotLight;
 
 			uint32_t cameraDataVersion;
 			Camera camera;
@@ -99,6 +101,11 @@ namespace Tga
 
 		void SetAmbientLight(AmbientLight light);
 		const AmbientLight& GetAmbientLight();
+
+		// SpotLight  
+		void SetSpotLight(SpotLight light);
+		const SpotLight& GetSpotLight();
+
 
 		// These transform functions set a base coordinate system, used for drawing all objects (e.g. sprites, meshes, texts
 		// The transform of an object/sprite is interpreted as a local transform, relative to this coordinate system

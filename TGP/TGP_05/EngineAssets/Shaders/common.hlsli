@@ -54,6 +54,16 @@ cbuffer LightConstantBufferData : register(b2)
 	float4 DirectionalLightColor;
     float4x4 DirectionalLightToWorldTransform;
     float4x4 DirectionalWorldToLightTransform;
+	
+	// SpotLight
+    float4 SpotLightPosition;
+    float4 SpotLightDirection;
+    float4 SpotLightColor;
+    float SpotLightRange;
+    float SpotLightInnerConeAngle;
+    float SpotLightOuterConeAngle;
+    float SpotLightPadding0;
+    float4x4 SpotLightWorldToLightClip;
 };
 
 cbuffer ShaderSettingsConstantBuffer : register(b3)
@@ -135,6 +145,7 @@ Texture2D materialTexture	: register(t3);
 Texture2D fxTexture			: register(t4);
 
 Texture2D directionalLightShadowMap : register(t8);
+Texture2D spotLightShadowMap : register(t9);
 
 SamplerState defaultSampler : register(s0);
 

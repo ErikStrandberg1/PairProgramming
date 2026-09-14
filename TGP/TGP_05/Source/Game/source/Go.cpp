@@ -21,6 +21,7 @@
 #include <tge/settings/settings.h>
 #include <tge/shaders/ModelShader.h>
 #include <tge/Application.h>
+#include <tge/graphics/SpotLight.h>
 
 #include "imgui/imgui.h"
 
@@ -61,6 +62,15 @@ struct RenderData
 	bool enableAmbientLight = true;
 	ShadingMode shadingMode = ShadingMode::PBR;
 
+	// spotlight gui
+	bool enableSpotLight = true;
+	bool animateSpotLightDirection = true;
+	float spotLightYaw = 0.f;
+	float spotLightPitch = 60.f;
+	float spotLightHeight = 600.f;
+	float spotLightIntensity = 3.f;
+
+
 	DepthBuffer myIntermediateDepth;
 	RenderTarget myIntermediateTexture;
 
@@ -69,6 +79,9 @@ struct RenderData
 	std::vector<std::shared_ptr<PointLight>> myPointLights;
 	std::shared_ptr<DirectionalLight> myDirectionalLight;
 	std::shared_ptr<AmbientLight> myAmbientLight;
+	SpotLight mySpotLight;
+	Camera mySpotLightCamera;
+	DepthBuffer mySpotShadowMap;
 	std::shared_ptr<Camera> myMainCamera;
 
 	Tga::SpriteSharedData mySpriteSharedData;
@@ -81,7 +94,7 @@ struct RenderData
 	ModelShader debugAmbientOcclusionShader;
 	ModelShader debugEmissiveShader;
 
-	static constexpr int BloomLevels = 5; // 1/32
+	static constexpr int BloomLevels = 5;
 
 	bool enableBloom = true;
 	PostProcessBufferData postProcessData;
@@ -132,7 +145,14 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 	{
 		graphicsStateStack.SetAmbientLight({ {} });
 	}
-
+	if (renderData.enableSpotLight)
+	{
+		graphicsStateStack.SetSpotLight(renderData.mySpotLight);
+	}
+	else
+	{
+		graphicsStateStack.SetSpotLight({});
+	}
 	graphicsStateStack.ClearPointLights();
 
 	if (renderData.enablePointLights)
@@ -143,6 +163,32 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 		}
 	}
 
+
+	////////////////////////////////////////////////////////////////////////////////
+	//// Spot light shadow pass
+	if (renderData.enableSpotLight)
+	{
+		graphicsStateStack.Push();
+		graphicsStateStack.SetCamera(renderData.mySpotLightCamera);
+		graphicsStateStack.SetBlendState(BlendState::Disabled);
+
+		{
+			ID3D11ShaderResourceView* nullView = nullptr;
+			DX11::Context->PSSetShaderResources(9, 1, &nullView);
+		}
+
+		renderData.mySpotShadowMap.Clear();
+		renderData.mySpotShadowMap.SetAsActiveTarget();
+
+		for (auto& modelInstance : renderData.myModels)
+		{
+			graphicsEngine.GetModelDrawer().DrawLambert(*modelInstance);
+		}
+
+		graphicsStateStack.Pop();
+
+	}
+
 	////////////////////////////////////////////////////////////////////////////////
 	//// Draw all forward rendered objects
 
@@ -151,7 +197,10 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 
 
 	renderData.myIntermediateTexture.SetAsActiveTarget(&renderData.myIntermediateDepth);
-
+	if (renderData.enableSpotLight)
+	{
+		renderData.mySpotShadowMap.SetAsResourceOnSlot(9);
+	}
 
 	for (auto& modelInstance : renderData.myModels)
 	{
@@ -190,6 +239,12 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 
 	////////////////////////////////////////////////////////////////////////////////
 
+	// re-cleanup
+	{
+		ID3D11ShaderResourceView* nullView = nullptr;
+		DX11::Context->PSSetShaderResources(9, 1, &nullView);
+	}
+
 	{
 		Tga::SpriteBatchScope batch = graphicsEngine.GetSpriteDrawer().BeginBatch(renderData.mySpriteSharedData);
 		batch.Draw(renderData.mySpriteInstanceData);
@@ -225,9 +280,13 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 			renderData.myBloomTextures[i].SetAsActiveTarget();
 
 			if (i == 0)
+			{
 				renderData.myIntermediateTexture.SetAsResourceOnSlot(1);
+			}
 			else
+			{
 				renderData.myBloomTextures[i - 1].SetAsResourceOnSlot(1);
+			}
 
 			renderData.myDownsampleEffect.Render();
 		}
@@ -325,6 +384,7 @@ void Go(void)
 			renderData.myIntermediateDepth = DepthBuffer::Create(DX11::GetResolution());
 			renderData.myIntermediateTexture = RenderTarget::Create(DX11::GetResolution(),
 				DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT);
+			renderData.mySpotShadowMap = DepthBuffer::Create({ 2048, 2048 });
 		}
 
 		Vector2ui bloomRes = DX11::GetResolution();
@@ -432,6 +492,13 @@ void Go(void)
 			GraphicsEngine::GetInstance()->GetTextureManager().GetTexture(
 				"cube_1024_preblurred_angle3_Skansen3.dds", TextureSrgbMode::None)
 		};
+
+		// spotlight fixed properties
+		renderData.mySpotLight.color = Color{ 3.f, 3.f, 2.5f };
+		renderData.mySpotLight.range = 3000.f;
+		renderData.mySpotLight.innerConeAngleDegrees = 15.f;
+		renderData.mySpotLight.outerConeAngleDegrees = 30.f;
+
 
 		std::shared_ptr<Camera> camera = std::make_shared<Camera>(Camera());
 
@@ -562,6 +629,37 @@ void Go(void)
 				PostQuitMessage(0);
 			}
 
+
+
+
+
+			// Animate the spot light: fixed position above the scene, spinning yaw like a lighthouse
+			if (renderData.animateSpotLightDirection)
+			{
+				renderData.spotLightYaw += 60.f * timer.GetDeltaTime();
+			}
+
+			renderData.mySpotLight.color = Color{ renderData.spotLightIntensity, renderData.spotLightIntensity, renderData.spotLightIntensity };
+
+			Vector3f spotPosition = { 0.f, renderData.spotLightHeight, 0.f };
+			Rotator spotRotation(renderData.spotLightPitch, renderData.spotLightYaw, 0.f);
+
+			renderData.mySpotLightCamera.SetPerspectiveProjection(
+				renderData.mySpotLight.outerConeAngleDegrees * 2.f,
+				{ 2048.f, 2048.f },
+				10.f,
+				renderData.mySpotLight.range);
+			renderData.mySpotLightCamera.GetTransform().SetRotation(spotRotation);
+			renderData.mySpotLightCamera.GetTransform().SetPosition(spotPosition);
+
+			renderData.mySpotLight.position = spotPosition;
+			renderData.mySpotLight.direction = renderData.mySpotLightCamera.GetTransform().GetForward();
+			renderData.mySpotLight.worldToLightClip = Matrix4x4f::Inverse(
+				Matrix4x4f::Inverse(renderData.mySpotLightCamera.GetProjection()) * renderData.mySpotLightCamera.GetTransform());
+
+
+
+
 			if (!Tga::Application::GetInstance()->BeginFrame() || !graphicsEngine.BeginFrame())
 			{
 				break;
@@ -594,7 +692,17 @@ void Go(void)
 				ImGui::Checkbox("Enable Directional Light", &renderData.enableDirectionalLight);
 				ImGui::Checkbox("Enable Ambient Light", &renderData.enableAmbientLight);
 				ImGui::Checkbox("Enable Point Lights", &renderData.enablePointLights);
-
+				ImGui::Checkbox("Enable Spot Light", &renderData.enableSpotLight);
+				if (ImGui::CollapsingHeader("Spot Light", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Checkbox("Animate Direction", &renderData.animateSpotLightDirection);
+					ImGui::SliderFloat("Yaw", &renderData.spotLightYaw, 0.f, 360.f);
+					ImGui::SliderFloat("Pitch", &renderData.spotLightPitch, 0.f, 89.f);
+					ImGui::SliderFloat("Height", &renderData.spotLightHeight, 100.f, 2000.f);
+					ImGui::SliderFloat("Intensity", &renderData.spotLightIntensity, 0.f, 10.f);
+					ImGui::SliderFloat("Inner Cone Angle", &renderData.mySpotLight.innerConeAngleDegrees, 1.f, renderData.mySpotLight.outerConeAngleDegrees - 1.f);
+					ImGui::SliderFloat("Outer Cone Angle", &renderData.mySpotLight.outerConeAngleDegrees, renderData.mySpotLight.innerConeAngleDegrees + 1.f, 89.f);
+				}
 				static const char* items[]
 				{
 					"Unlit",

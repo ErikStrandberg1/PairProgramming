@@ -60,6 +60,16 @@ struct LightConstantBufferData
 	Vector4f directionalLightColor;
 	Matrix4x4f directionalLightToWorldTransform;
 	Matrix4x4f directionalWorldToLightTransform;
+
+	// New spotlight declaration
+	Vector4f spotLightPosition;
+	Vector4f spotLightDirection;
+	Vector4f spotLightColor;
+	float spotLightRange;
+	float spotLightInnerConeAngle;   
+	float spotLightOuterConeAngle;   
+	float spotLightPadding0;
+	Matrix4x4f spotLightWorldToLightClip;
 };
 
 bool GraphicsStateStack::Init()
@@ -305,6 +315,17 @@ const AmbientLight& GraphicsStateStack::GetAmbientLight()
 	return myRenderStateStack.back().ambientLight;
 }
 
+void Tga::GraphicsStateStack::SetSpotLight(SpotLight light)
+{
+	myRenderStateStack.back().lightDataVersion = ++myLatestLightDataVersion;
+	myRenderStateStack.back().spotLight = light;
+}
+
+const SpotLight& Tga::GraphicsStateStack::GetSpotLight()
+{
+	return myRenderStateStack.back().spotLight;
+}
+
 void GraphicsStateStack::SetTransform(Matrix4x4f transform)
 {
 	myRenderStateStack.back().transform = transform;
@@ -458,6 +479,19 @@ void GraphicsStateStack::UpdateGpuStates(bool fullReset)
 		dataPtrLights->directionalLightColor = directionalLight.color.AsLinearVec4();
 		dataPtrLights->directionalLightSoftness = directionalLight.softness;
 		dataPtrLights->ambientLightColor = ambientLight.color.AsLinearVec4();
+
+
+		// SpotLight
+		const SpotLight& spotLight = state.spotLight;
+		dataPtrLights->spotLightPosition = spotLight.position;
+		dataPtrLights->spotLightDirection = spotLight.direction;
+		dataPtrLights->spotLightColor = spotLight.color.AsLinearVec4();
+		dataPtrLights->spotLightRange = spotLight.range;
+		dataPtrLights->spotLightInnerConeAngle = spotLight.innerConeAngleDegrees * (3.14159265f / 180.f);
+		dataPtrLights->spotLightOuterConeAngle = spotLight.outerConeAngleDegrees * (3.14159265f / 180.f);
+		dataPtrLights->spotLightWorldToLightClip = spotLight.worldToLightClip;
+		
+
 
 		DX11::Context->Unmap(myLightConstantBuffer.Get(), 0);
 		

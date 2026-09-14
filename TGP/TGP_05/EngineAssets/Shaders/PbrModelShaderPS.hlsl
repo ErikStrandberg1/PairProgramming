@@ -1,6 +1,30 @@
 #include "Common.hlsli"
 #include "PBRFunctions.hlsli"
 
+
+// new 
+float EvaluateSpotShadow(float4 worldPosition, float3 worldNormal)
+{
+    float4 pos = worldPosition;
+    pos.xyz += 1.0f * normalize(worldNormal);
+
+    float4 lightClipPos = mul(SpotLightWorldToLightClip, pos);
+    float3 projected = lightClipPos.xyz / lightClipPos.w;
+
+    float2 shadowUV = 0.5f + float2(0.5f, -0.5f) * projected.xy;
+
+    if (shadowUV.x < 0.f || shadowUV.x > 1.f || shadowUV.y < 0.f || shadowUV.y > 1.f)
+    {
+        return 1.0f;
+    }
+
+    float shadowMapDepth = spotLightShadowMap.SampleLevel(defaultSampler, shadowUV, 0).r;
+    float bias = 0.0005f;
+
+    return (projected.z > shadowMapDepth + bias) ? 0.0f : 1.0f;
+}
+
+
 PixelOutput main(ModelVertexToPixel input)
 {
 	PixelOutput result;
@@ -94,9 +118,15 @@ PixelOutput main(ModelVertexToPixel input)
 				toEye.xyz, input.worldPosition.xyz);
 		}
 	}
-	
-	float3 emissiveAlbedo = albedo.rgb * emissive;
-	float3 radiance = directionalLight + ambiance + pointLights + emissiveAlbedo;
+	// change 
+    float spotShadow = EvaluateSpotShadow(input.worldPosition, input.normal.xyz);
+    float3 spotLightContribution = spotShadow * EvaluateSpotLight(
+		diffuseColor, specularColor, pixelNormal, roughness,
+		SpotLightColor.rgb, SpotLightRange, SpotLightPosition.xyz, SpotLightDirection.xyz,
+		SpotLightOuterConeAngle, SpotLightInnerConeAngle, toEye.xyz, input.worldPosition.xyz);
+
+    float3 emissiveAlbedo = albedo.rgb * emissive;
+    float3 radiance = directionalLight + ambiance + pointLights + spotLightContribution + emissiveAlbedo;
 
     result.color.rgb = (float3) radiance;
 	result.color.a = albedo.a;
