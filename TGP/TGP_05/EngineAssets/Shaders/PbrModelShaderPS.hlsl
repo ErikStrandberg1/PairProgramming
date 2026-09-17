@@ -1,8 +1,6 @@
 #include "Common.hlsli"
 #include "PBRFunctions.hlsli"
 
-
-// new 
 float EvaluateSpotShadow(float4 worldPosition, float3 worldNormal)
 {
     float4 pos = worldPosition;
@@ -99,8 +97,7 @@ PixelOutput main(ModelVertexToPixel input)
 			DirectionalLightColor.xyz, DirectionalLightToWorldTransform._m02_m12_m22, toEye.xyz);
     }
 
-	
-	float3 pointLights = 0; // <- The sum of all point lights.
+	float3 pointLights = 0; 
 	for(unsigned int p = 0; p < NumberOfLights; p++)
 	{
 		if (PointLights[p].radius == 0.f)
@@ -118,7 +115,7 @@ PixelOutput main(ModelVertexToPixel input)
 				toEye.xyz, input.worldPosition.xyz);
 		}
 	}
-	// change 
+	
     float spotShadow = EvaluateSpotShadow(input.worldPosition, input.normal.xyz);
     float3 spotLightContribution = spotShadow * EvaluateSpotLight(
 		diffuseColor, specularColor, pixelNormal, roughness,

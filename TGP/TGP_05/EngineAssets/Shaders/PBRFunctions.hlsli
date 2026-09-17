@@ -615,8 +615,6 @@ float3 EvaluateSoftAreaLight(float3 albedoColor, float3 specularColor, float3 no
     return lightColor * attenuation * (cDiff + cSpec) * PI;
 }
 
-
-
 float3 EvaluateSpotLight(float3 albedoColor, float3 specularColor, float3 normal,
     float roughness, float3 lightColor, float lightRange,
     float3 lightPos, float3 lightDir, float outerAngle, float innerAngle, float3 viewDir, float3 pixelPos)

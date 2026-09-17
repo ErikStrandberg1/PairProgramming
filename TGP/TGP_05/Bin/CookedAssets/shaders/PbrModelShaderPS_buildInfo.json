@@ -1,7 +1,7 @@
 {
     "dependencies": {
-        "Common.hlsli": "2026-09-14T14:27:20Z",
-        "PBRFunctions.hlsli": "2026-09-14T14:58:12Z"
+        "Common.hlsli": "2026-09-14T17:35:16Z",
+        "PBRFunctions.hlsli": "2026-09-17T08:46:42Z"
     },
-    "timestamp": "2026-09-14T14:59:03Z"
+    "timestamp": "2026-09-17T08:38:04Z"
 }

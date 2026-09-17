@@ -102,10 +102,8 @@ namespace Tga
 		void SetAmbientLight(AmbientLight light);
 		const AmbientLight& GetAmbientLight();
 
-		// SpotLight  
 		void SetSpotLight(SpotLight light);
 		const SpotLight& GetSpotLight();
-
 
 		// These transform functions set a base coordinate system, used for drawing all objects (e.g. sprites, meshes, texts
 		// The transform of an object/sprite is interpreted as a local transform, relative to this coordinate system
@@ -130,8 +128,6 @@ namespace Tga
 		bool CreateRasterizerStates();
 		bool CreateSamplers();
 		bool CreateConstantBuffers();
-
-		void SetAllStates(const RenderState& RenderState);
 
 		RenderState myGpuRenderState;
 		std::vector<RenderState> myRenderStateStack;

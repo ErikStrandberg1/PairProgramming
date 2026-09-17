@@ -62,14 +62,12 @@ struct RenderData
 	bool enableAmbientLight = true;
 	ShadingMode shadingMode = ShadingMode::PBR;
 
-	// spotlight gui
 	bool enableSpotLight = true;
 	bool animateSpotLightDirection = true;
 	float spotLightYaw = 0.f;
 	float spotLightPitch = 60.f;
 	float spotLightHeight = 600.f;
-	float spotLightIntensity = 3.f;
-
+	float spotLightIntensity = 6.f;
 
 	DepthBuffer myIntermediateDepth;
 	RenderTarget myIntermediateTexture;
@@ -163,7 +161,6 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 		}
 	}
 
-
 	////////////////////////////////////////////////////////////////////////////////
 	//// Spot light shadow pass
 	if (renderData.enableSpotLight)
@@ -194,7 +191,6 @@ void Render(RenderData& renderData, GraphicsEngine& graphicsEngine)
 
 	graphicsStateStack.Push();
 	graphicsStateStack.SetBlendState(BlendState::Disabled);
-
 
 	renderData.myIntermediateTexture.SetAsActiveTarget(&renderData.myIntermediateDepth);
 	if (renderData.enableSpotLight)
@@ -629,11 +625,6 @@ void Go(void)
 				PostQuitMessage(0);
 			}
 
-
-
-
-
-			// Animate the spot light: fixed position above the scene, spinning yaw like a lighthouse
 			if (renderData.animateSpotLightDirection)
 			{
 				renderData.spotLightYaw += 60.f * timer.GetDeltaTime();
@@ -656,9 +647,6 @@ void Go(void)
 			renderData.mySpotLight.direction = renderData.mySpotLightCamera.GetTransform().GetForward();
 			renderData.mySpotLight.worldToLightClip = Matrix4x4f::Inverse(
 				Matrix4x4f::Inverse(renderData.mySpotLightCamera.GetProjection()) * renderData.mySpotLightCamera.GetTransform());
-
-
-
 
 			if (!Tga::Application::GetInstance()->BeginFrame() || !graphicsEngine.BeginFrame())
 			{
@@ -693,6 +681,7 @@ void Go(void)
 				ImGui::Checkbox("Enable Ambient Light", &renderData.enableAmbientLight);
 				ImGui::Checkbox("Enable Point Lights", &renderData.enablePointLights);
 				ImGui::Checkbox("Enable Spot Light", &renderData.enableSpotLight);
+
 				if (ImGui::CollapsingHeader("Spot Light", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::Checkbox("Animate Direction", &renderData.animateSpotLightDirection);

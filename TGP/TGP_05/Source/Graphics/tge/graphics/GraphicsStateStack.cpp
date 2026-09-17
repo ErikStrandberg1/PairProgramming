@@ -480,18 +480,14 @@ void GraphicsStateStack::UpdateGpuStates(bool fullReset)
 		dataPtrLights->directionalLightSoftness = directionalLight.softness;
 		dataPtrLights->ambientLightColor = ambientLight.color.AsLinearVec4();
 
-
-		// SpotLight
 		const SpotLight& spotLight = state.spotLight;
 		dataPtrLights->spotLightPosition = spotLight.position;
 		dataPtrLights->spotLightDirection = spotLight.direction;
 		dataPtrLights->spotLightColor = spotLight.color.AsLinearVec4();
 		dataPtrLights->spotLightRange = spotLight.range;
-		dataPtrLights->spotLightInnerConeAngle = spotLight.innerConeAngleDegrees * (3.14159265f / 180.f);
-		dataPtrLights->spotLightOuterConeAngle = spotLight.outerConeAngleDegrees * (3.14159265f / 180.f);
+		dataPtrLights->spotLightInnerConeAngle = spotLight.innerConeAngleDegrees * FMath::DegToRad;
+		dataPtrLights->spotLightOuterConeAngle = spotLight.outerConeAngleDegrees * FMath::DegToRad;
 		dataPtrLights->spotLightWorldToLightClip = spotLight.worldToLightClip;
-		
-
 
 		DX11::Context->Unmap(myLightConstantBuffer.Get(), 0);
 		

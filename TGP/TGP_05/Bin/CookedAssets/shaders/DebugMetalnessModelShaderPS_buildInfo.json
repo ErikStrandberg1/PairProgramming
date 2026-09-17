@@ -1,7 +1,7 @@
 {
     "dependencies": {
-        "Common.hlsli": "2026-09-14T14:27:20Z",
-        "LambertFunctions.hlsli": "2026-09-13T15:24:12Z"
+        "Common.hlsli": "2026-09-14T17:35:16Z",
+        "LambertFunctions.hlsli": "2026-09-13T11:41:18Z"
     },
-    "timestamp": "2026-09-13T15:24:12Z"
+    "timestamp": "2026-09-13T11:41:18Z"
 }
