@@ -13,6 +13,7 @@ namespace AI
 	{
 		ePlayer,
 		eEnemy,
+		eGuard,
 	};
 
 	enum class eSteeringType
@@ -34,10 +35,10 @@ namespace AI
 		virtual eControllerType GetType() const = 0;
 		virtual bool ShouldFaceVelocity() const { return true; }
 
-	protected:
-		eSteeringType mySteeringType = eSteeringType::eSeek;
 		float myMaxSpeed = 3;
 		float myMaxForce = 1;
+	protected:
+		eSteeringType mySteeringType = eSteeringType::eSeek;
 	};
 
 	class ControllerFactory

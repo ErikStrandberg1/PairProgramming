@@ -37,22 +37,31 @@ void GameWorld::Init()
 	myPlayer = player.get();
 	myActors.push_back(std::move(player));
 
-	int enemyCount = 128;
-	for (int i = 0; i < enemyCount; ++i)
-	{
-		auto enemy = std::make_unique<Actor>();
-		Vector2f startPos = {.3f + (float)i / 128, .3f + (float)i / (128.f / 2.f)};
+	auto guardActor = std::make_unique<Actor>();
+	guardActor->Init(
+		"../data/sprites/killerRobo1.png",
+		0.2f,
+		myControllerFactory.CreateController(AI::eControllerType::eGuard, AI::eSteeringType::eWander),
+		{0.f, 0.5f}
+	);
+	myActors.push_back(std::move(guardActor));
 
-		float speed = .05f + (float)(rand() % 20) / 1000.f;
-		enemy->Init(
-			"../data/sprites/killerRobo1.png",
-			speed,
-			myControllerFactory.CreateController(AI::eControllerType::eEnemy, AI::eSteeringType::eFlock),
-			startPos
-		);
+	//int enemyCount = 128;
+	//for (int i = 0; i < enemyCount; ++i)
+	//{
+	//	auto enemy = std::make_unique<Actor>();
+	//	Vector2f startPos = {.3f + (float)i / 128, .3f + (float)i / (128.f / 2.f)};
 
-		myActors.push_back(std::move(enemy));
-	}
+	//	float speed = .05f + (float)(rand() % 20) / 1000.f;
+	//	enemy->Init(
+	//		"../data/sprites/killerRobo1.png",
+	//		speed,
+	//		myControllerFactory.CreateController(AI::eControllerType::eEnemy, AI::eSteeringType::eFlock),
+	//		startPos
+	//	);
+
+	//	myActors.push_back(std::move(enemy));
+	//}
 
 	std::vector<Actor*> tempActors = {};
 	tempActors.reserve(myActors.size());
@@ -70,8 +79,6 @@ void GameWorld::Update(const UpdateContext& context)
 	{
 		actor->Update(context);
 	}
-
-
 }
 
 void GameWorld::Render()

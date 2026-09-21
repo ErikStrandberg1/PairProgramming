@@ -24,13 +24,15 @@ public:
 	void Init(const char* aSpritePath, const float aSpeed, AI::Controller* aAIController,
 	          const Tga::Vector2f& aStartPosition);
 	void Render();
-	void Update(const UpdateContext& inputContext);
+	virtual void Update(const UpdateContext& inputContext);
 	const Tga::Vector2f& GetPosition() const;
 
 	AI::Controller* GetController() const;
 	const Tga::Vector2f& GetVelocity() const { return myVel; }
 
-private:
+protected:
+	void ScreenWrap(const UpdateContext& aUpdateCtx);
+	void UpdateMovement(const UpdateContext& aUpdateCtx, Tga::Vector2f aSteeringForce);
 	Tga::Vector2f myPosition;
 	Tga::Texture* mySpriteTexture;
 	Tga::Texture* myShadowTexture;

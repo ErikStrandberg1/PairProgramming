@@ -2,6 +2,7 @@
 #include "Controller.h"
 
 #include "FlockController.h"
+#include "GuardController.h"
 #include "SeekController.h"
 #include "SeparationController.h"
 #include "UpdateContext.h"
@@ -46,6 +47,10 @@ namespace AI
 				{
 					return new FlockController(aSteering);
 				}
+			}
+			case eControllerType::eGuard:
+			{
+				return new GuardController();
 			}
 		}
 		return nullptr;

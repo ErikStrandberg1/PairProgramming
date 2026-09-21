@@ -93,10 +93,53 @@ void Actor::Update(const UpdateContext& updateContext)
 		return;
 	}
 
-	const float dt = updateContext.myDeltaTime;
-
 	const Tga::Vector2f steeringForce = myController->Update(updateContext, {myPosition, myVel, this});
+	UpdateMovement(updateContext, steeringForce);
+	ScreenWrap(updateContext);
+	
+}
 
+const Tga::Vector2f& Actor::GetPosition() const
+{
+	return myPosition;
+}
+
+AI::Controller* Actor::GetController() const
+{
+	if (myController)
+	{
+		return myController;
+	}
+	return nullptr;
+}
+
+void Actor::ScreenWrap(const UpdateContext& aUpdateCtx)
+{
+	const Tga::Vector2f screenMax = aUpdateCtx.myGameWold->GetScreenMax();
+
+	if (myPosition.x < 0.f)
+	{
+		myPosition.x += screenMax.x;
+	}
+	else if (myPosition.x > screenMax.x)
+	{
+		myPosition.x -= screenMax.x;
+	}
+	if (myPosition.y < 0.f)
+	{
+		myPosition.y += screenMax.y;
+	}
+	else if (myPosition.y > screenMax.y)
+	{
+		myPosition.y -= screenMax.y;
+	}
+}
+
+void Actor::UpdateMovement(const UpdateContext& aUpdateCtx, Tga::Vector2f aSteeringForce)
+{
+	auto steeringForce = aSteeringForce;
+	auto dt = aUpdateCtx.myDeltaTime;
+	
 	myVel += steeringForce * dt;
 
 	if (steeringForce.LengthSqr() < MIN_STEERING_FORCE * MIN_STEERING_FORCE)
@@ -126,37 +169,4 @@ void Actor::Update(const UpdateContext& updateContext)
 		const float diffRot = std::remainder(targetRot - myRotation, 2.f * FMath::Pi);
 		myRotation += diffRot * std::min(1.f, turnSpeed * dt);
 	}
-
-	const Tga::Vector2f screenMax = updateContext.myGameWold->GetScreenMax();
-
-	if (myPosition.x < 0.f)
-	{
-		myPosition.x += screenMax.x;
-	}
-	else if (myPosition.x > screenMax.x)
-	{
-		myPosition.x -= screenMax.x;
-	}
-	if (myPosition.y < 0.f)
-	{
-		myPosition.y += screenMax.y;
-	}
-	else if (myPosition.y > screenMax.y)
-	{
-		myPosition.y -= screenMax.y;
-	}
-}
-
-const Tga::Vector2f& Actor::GetPosition() const
-{
-	return myPosition;
-}
-
-AI::Controller* Actor::GetController() const
-{
-	if (myController)
-	{
-		return myController;
-	}
-	return nullptr;
 }
