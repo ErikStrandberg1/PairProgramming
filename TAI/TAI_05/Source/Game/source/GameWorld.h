@@ -11,6 +11,7 @@
 namespace Tga
 {
 	class Texture;
+	class Text;
 }
 
 class GameWorld
@@ -25,6 +26,7 @@ public:
 	void Render();
 	Tga::Vector2f GetScreenMin() { return myScreenMin; };
 	Tga::Vector2f GetScreenMax() { return myScreenMax; };
+	void RenderWinScreen();
 
 private:
 	Actor* myPlayer;
@@ -37,4 +39,9 @@ private:
 	Tga::Vector2f myScreenMin;
 	Tga::Vector2f myScreenMax;
 	Tga::Camera camera;
+
+	float myElapsedTime = 0.f;
+	std::unique_ptr<Tga::Text> myWinTitle;
+	std::unique_ptr<Tga::Text> myWinInfo;
+	std::unique_ptr<Tga::Text> myWinHint;
 };

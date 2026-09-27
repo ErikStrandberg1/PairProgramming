@@ -16,6 +16,8 @@ struct UpdateContext;
 class Actor
 {
 public:
+	static constexpr float DEFAULT_SIZE = 0.035f;
+
 	Actor();
 	Actor(const char* aSpritePath, const float aSpeed, AI::Controller* aAIController,
 	      const Tga::Vector2f& aStartPosition);
@@ -27,6 +29,7 @@ public:
 	virtual void Update(const UpdateContext& inputContext);
 	const Tga::Vector2f& GetPosition() const;
 	void Teleport(const Tga::Vector2f& aPosition);
+	void SetSize(float aSize) { mySize = aSize; }
 
 	AI::Controller* GetController() const;
 	const Tga::Vector2f& GetVelocity() const { return myVel; }
@@ -40,6 +43,7 @@ protected:
 	AI::Controller* myController;
 	float mySpeed;
 	float myRotation;
+	float mySize = DEFAULT_SIZE;
 
 	Tga::Vector2f myVel = 0.f;
 	Tga::Vector2f myDirection = {1.f, 0.f};

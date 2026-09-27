@@ -11,8 +11,9 @@ namespace AI
 {
 	namespace
 	{
-		constexpr float VISION_RANGE = 0.1f;
+		constexpr float VISION_RANGE = 0.22f;
 		constexpr float CAPTURE_RANGE = 0.03f;
+		constexpr float HIDE_RADIUS = 0.05f;
 	}
 
 	class GuardController : public Controller
@@ -33,7 +34,7 @@ namespace AI
 
 		int GetCurrentWayPoint() const { return myInterestIdx; }
 		std::vector<Tga::Vector2f> GetWayPoints() const { return myPointOfInterests; }
-		void NextWayPoint() { myInterestIdx = (myInterestIdx + 1) % static_cast<int>(myPointOfInterests.size()); }
+		void NextWayPoint();
 
 	private:
 		std::vector<std::unique_ptr<State>> myAvailableStates;

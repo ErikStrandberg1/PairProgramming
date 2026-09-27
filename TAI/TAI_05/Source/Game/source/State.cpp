@@ -18,7 +18,7 @@ Tga::Vector2f AI::IdleState::Update([[maybe_unused]] AI::GuardController& aGuard
 {
 	if (aGuardController.GetStateTimer() <= REST_DURATION)
 	{
-		return aMoveCtx.pos; // stay in place
+		return aMoveCtx.pos; 
 	}
 	else
 	{
@@ -31,14 +31,11 @@ Tga::Vector2f AI::ChaseState::Update([[maybe_unused]] AI::GuardController& aGuar
                                      [[maybe_unused]] const UpdateContext& aCtx,
                                      [[maybe_unused]] const UpdateMoveContext& aMoveCtx)
 {
-
-
 	if (aGuardController.IsBanditCaptured(aMoveCtx.pos))
 	{
 		AIEvent event;
 		event.myType = AIEvent::Type::BanditCaptured;
 		AIEventManager::GetInstance().SendEvent(event);
-		std::cout << "Guard has captured the bandit!\n";
 		aGuardController.SetState(GuardStates::Idle);
 		return Tga::Vector2f{};
 	}
@@ -67,7 +64,6 @@ Tga::Vector2f AI::PatrolState::Update([[maybe_unused]] AI::GuardController& aGua
 		AIEvent event;
 		event.myType = AIEvent::Type::GuardSpottedBandit;
 		AIEventManager::GetInstance().SendEvent(event);
-		std::cout << "Guard has spotted the bandit!\n";
 		aGuardController.SetState(GuardStates::Chase);
 
 		return Tga::Vector2f{};

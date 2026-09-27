@@ -46,7 +46,7 @@ bool AI::IsGuardNearNode::Condition([[maybe_unused]] BanditController& aBandit,
 {
 	auto guardPos = PollingStation::GetInstance().GetGuardPosition();
 
-	if ((guardPos - aMoveCtx.pos).LengthSqr() < 0.2f * 0.2f)
+	if ((guardPos - aMoveCtx.pos).LengthSqr() < 0.18f * 0.18f)
 	{
 		return true;
 	}
@@ -56,15 +56,20 @@ bool AI::IsGuardNearNode::Condition([[maybe_unused]] BanditController& aBandit,
 bool AI::IsHidingSpotNearNode::Condition(BanditController& aBandit, [[maybe_unused]] const UpdateContext& aCtx,
                                          const UpdateMoveContext& aMoveCtx)
 {
-	auto hidingSpots = aBandit.GetHidingSpots();
-	for (const auto& spot : hidingSpots)
+	constexpr float searchRange = 0.2f;
+	float closestDistSqr = searchRange * searchRange;
+	bool found = false;
+
+	for (const auto& spot : aBandit.GetHidingSpots())
 	{
-		if ((spot - aMoveCtx.pos).LengthSqr() < 0.2f * 0.2f)
+		const float distSqr = (spot - aMoveCtx.pos).LengthSqr();
+		if (distSqr < closestDistSqr)
 		{
+			closestDistSqr = distSqr;
 			aBandit.SetTargetHidingSpot(spot);
-			return true;
+			found = true;
 		}
 	}
 
-	return false;
+	return found;
 }

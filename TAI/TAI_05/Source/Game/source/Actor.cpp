@@ -16,7 +16,7 @@
 static constexpr float STOP_SPEED = 0.01f;
 static constexpr float MIN_STEERING_FORCE = 0.001f;
 static constexpr float VELOCITY_DAMPING = 0.97f;
-static constexpr float ACTOR_SIZE = 0.035f;
+
 static constexpr float MIN_ROTATION_FORCE = 0.02f;
 
 Actor::Actor()
@@ -73,7 +73,7 @@ void Actor::Render()
 		Tga::Sprite2DInstanceData instanceData = {};
 		instanceData.myPivot = {0.5f, 0.5f};
 		instanceData.myPosition = myPosition;
-		instanceData.mySize = {ACTOR_SIZE, ACTOR_SIZE};
+		instanceData.mySize = {mySize, mySize};
 
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
@@ -85,8 +85,11 @@ void Actor::Render()
 		instanceData.myPivot = {0.5f, 0.5f};
 		instanceData.myPosition = myPosition;
 		instanceData.myRotation = myRotation;
-		instanceData.mySize = {ACTOR_SIZE, ACTOR_SIZE};
-
+		if (myController && myController->GetType() == eControllerType::eBandit)
+		{
+			instanceData.myRotation += (FMath::Pi / 2);
+		}
+		instanceData.mySize = {mySize, mySize};
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
 }

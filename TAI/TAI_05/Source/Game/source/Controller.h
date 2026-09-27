@@ -1,6 +1,7 @@
 #pragma once
 #include "UpdateContext.h"
 #include <tge/math/vector.h>
+#include <cstdlib>
 
 struct UpdateContext;
 struct AIEvent;
@@ -10,12 +11,18 @@ namespace AI
 {
 	class PollingStation;
 
+	inline float RandomRange(float aMin, float aMax)
+	{
+		return aMin + (aMax - aMin) * ((float)rand() / (float)RAND_MAX);
+	}
+
 	enum class eControllerType
 	{
 		ePlayer,
 		eEnemy,
 		eGuard,
 		eBandit,
+		eDummy,
 	};
 
 	enum class eSteeringType
