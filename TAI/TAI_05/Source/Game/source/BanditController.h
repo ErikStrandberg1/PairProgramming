@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "Controller.h"
+#include "DecisionNode.h"
 #include "State.h"
 
 namespace AI
@@ -22,9 +23,20 @@ namespace AI
 		void Death();
 		eControllerType GetType() const override { return eControllerType::eBandit; }
 
+		std::vector<Tga::Vector2f> GetHidingSpots() const { return myHidingSpots; }
+		void SetTargetHidingSpot(Tga::Vector2f aHidingSpot) { myTargetSpot = aHidingSpot; }
+		Tga::Vector2f GetHidingTarget() const { return myTargetSpot; }
+
+		Tga::Vector2f GetGoalSpot() const { return myGoalSpot; }
+
 	private:
-		std::vector<std::unique_ptr<State>> myAvailableStates;
-		State* myState = nullptr;
+		std::vector<std::unique_ptr<DecisionNode>> myNodes;
+		DecisionNode* myRootNode = nullptr;
+
+		std::vector<Tga::Vector2f> myHidingSpots;
+		Tga::Vector2f myTargetSpot;
+
+		Tga::Vector2f myGoalSpot;
 
 		Tga::Vector2f myTargetPosition;
 		Actor* mySpottedBandit = nullptr;

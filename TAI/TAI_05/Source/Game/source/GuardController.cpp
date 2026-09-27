@@ -33,15 +33,6 @@ Tga::Vector2f GuardController::Update(const UpdateContext& updateContext, const 
 		return Tga::Vector2f{};
 	}
 
-	auto banditPos = PollingStation::GetInstance().GetBanditPosition();
-	constexpr float catchRange = 0.01f;
-	if ((aUpdateMoveContext.pos - banditPos).LengthSqr() > catchRange * catchRange)
-	{
-		AIEvent event;
-		event.myType = AIEvent::Type::GuardSpottedBandit;
-		AIEventManager::GetInstance().SendEvent(event);
-	}
-
 	myStateTimer += updateContext.myDeltaTime;
 
 	auto targetPos = myState->Update(*this, updateContext, aUpdateMoveContext);

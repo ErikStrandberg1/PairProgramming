@@ -1,6 +1,7 @@
 #include "State.h"
 
 #include "Actor.h"
+#include "AIEventManager.h"
 #include "GuardController.h"
 #include "PollingStation.h"
 
@@ -50,6 +51,10 @@ Tga::Vector2f AI::PatrolState::Update([[maybe_unused]] AI::GuardController& aGua
 	}
 	if (aGuardController.CanSeeBandit(aMoveCtx.pos))
 	{
+		AIEvent event;
+		event.myType = AIEvent::Type::GuardSpottedBandit;
+		AIEventManager::GetInstance().SendEvent(event);
+
 		aGuardController.SetState(GuardStates::Chase);
 		return Tga::Vector2f{};
 	}

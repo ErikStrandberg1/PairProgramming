@@ -26,6 +26,7 @@ namespace AI
 		Tga::Vector2f Evaluate(BanditController& aBandit, const UpdateContext& aCtx,
 		                       const UpdateMoveContext& aMoveCtx) override;
 	};
+
 	class FleeNode : public DecisionNode
 	{
 	public:

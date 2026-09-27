@@ -11,7 +11,7 @@ namespace AI
 {
 	namespace
 	{
-		constexpr float VISION_RANGE = 0.1f;
+		constexpr float VISION_RANGE = 0.2f;
 	}
 
 	class GuardController : public Controller

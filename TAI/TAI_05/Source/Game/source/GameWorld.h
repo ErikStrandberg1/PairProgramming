@@ -37,6 +37,4 @@ private:
 	Tga::Vector2f myScreenMin;
 	Tga::Vector2f myScreenMax;
 	Tga::Camera camera;
-
-	std::vector<Tga::Vector2f> myHidingSpots;
 };

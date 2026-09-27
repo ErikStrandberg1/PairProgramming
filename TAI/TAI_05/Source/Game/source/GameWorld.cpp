@@ -23,10 +23,6 @@ GameWorld::~GameWorld()
 
 void GameWorld::Init()
 {
-	myHidingSpots.emplace_back(0.4f, 0.4f);
-	myHidingSpots.emplace_back(0.2f, 0.6f);
-	myHidingSpots.emplace_back(0.6f, 0.2f);
-
 	AI::PollingStation& pollingStation =
 		AI::PollingStation::GetInstance();
 
