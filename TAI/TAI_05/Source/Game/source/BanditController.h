@@ -44,5 +44,8 @@ namespace AI
 
 		float myDeathTimer = 0.f;
 		bool myHasDied = false;
+
+		Tga::Vector2f myStartPosition;
+		bool myHasStartPosition = false;
 	};
 }

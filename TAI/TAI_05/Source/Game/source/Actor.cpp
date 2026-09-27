@@ -53,6 +53,11 @@ void Actor::Init(const char* aSpritePath, const float aSpeed, AI::Controller* aA
 
 	const float startAngle = (float)rand() / (float)RAND_MAX * 2.f * FMath::Pi;
 	myVel = Tga::Vector2f(std::cos(startAngle), std::sin(startAngle)) * (aSpeed * 0.5f);
+
+	if (myController != nullptr)
+	{
+		myController->SetOwner(this);
+	}
 }
 
 
@@ -102,6 +107,13 @@ void Actor::Update(const UpdateContext& updateContext)
 const Tga::Vector2f& Actor::GetPosition() const
 {
 	return myPosition;
+}
+
+void Actor::Teleport(const Tga::Vector2f& aPosition)
+{
+	myPosition = aPosition;
+	myVel = {};
+	mySmoothedSteering = {};
 }
 
 AI::Controller* Actor::GetController() const

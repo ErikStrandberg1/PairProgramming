@@ -26,6 +26,7 @@ public:
 	void Render();
 	virtual void Update(const UpdateContext& inputContext);
 	const Tga::Vector2f& GetPosition() const;
+	void Teleport(const Tga::Vector2f& aPosition);
 
 	AI::Controller* GetController() const;
 	const Tga::Vector2f& GetVelocity() const { return myVel; }

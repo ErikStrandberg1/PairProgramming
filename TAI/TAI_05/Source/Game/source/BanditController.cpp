@@ -1,31 +1,11 @@
 #include "BanditController.h"
-
+#include "Actor.h"
 #include "AIEventManager.h"
 #include "SteeringBehaviours.h"
 
 AI::BanditController::BanditController()
 {
 	AIEventManager::GetInstance().Subscribe(this);
-	myHidingSpots.emplace_back(0.4f, 0.4f);
-	myHidingSpots.emplace_back(0.2f, 0.6f);
-	myHidingSpots.emplace_back(0.6f, 0.2f);
-
-	myGoalSpot = {0.1f, 0.5f};
-
-	auto goToGoalNode = std::make_unique<GoToGoalNode>();
-	auto fleeNode = std::make_unique<FleeNode>();
-	auto hideNode = std::make_unique<HideNode>();
-
-	auto isHidingSpotNear = std::make_unique<IsHidingSpotNearNode>(hideNode.get(), fleeNode.get());
-	auto isGuardNear = std::make_unique<IsGuardNearNode>(isHidingSpotNear.get(), goToGoalNode.get());
-
-	myRootNode = isGuardNear.get();
-
-	myNodes.emplace_back(std::move(isGuardNear));
-	myNodes.emplace_back(std::move(isHidingSpotNear));
-	myNodes.emplace_back(std::move(goToGoalNode));
-	myNodes.emplace_back(std::move(hideNode));
-	myNodes.emplace_back(std::move(fleeNode));
 }
 
 AI::BanditController::~BanditController()
@@ -35,27 +15,45 @@ AI::BanditController::~BanditController()
 Tga::Vector2f AI::BanditController::Update(const UpdateContext& updateContext,
                                            const UpdateMoveContext& aUpdateMoveContext)
 {
+
+	if (!myHasStartPosition)
+	{
+		myStartPosition = aUpdateMoveContext.pos;
+		myHasStartPosition = true;
+	}
+
 	if (myHasDied)
 	{
 		myDeathTimer += updateContext.myDeltaTime;
 		if (myDeathTimer >= DEATH_DURATION)
 		{
 			myHasDied = false;
+			myDeathTimer = 0.f;
+			if (myOwner != nullptr)
+			{
+				myOwner->Teleport(myStartPosition);
+			}
 		}
+		return Tga::Vector2f{}; 
 	}
 
-	auto targetPos = myRootNode->Evaluate(*this, updateContext, aUpdateMoveContext);
-	auto steer = AI::Steering::Seek(aUpdateMoveContext, targetPos, myMaxSpeed, myMaxForce);
-
-	return steer;
+	auto steering = Steering::Wander(aUpdateMoveContext, myWanderAngle, updateContext.myDeltaTime, myMaxSpeed,
+	                                 myMaxForce);
+	return steering;
 }
 
 void AI::BanditController::OnEvent(const AIEvent& aEvent)
 {
+	if (aEvent.myType == AIEvent::Type::BanditCaptured)
+	{
+		Death();
+		return;
+	}
 	Controller::OnEvent(aEvent);
 }
 
 void BanditController::Death()
 {
 	myHasDied = true;
+	myDeathTimer = 0.f;
 }
