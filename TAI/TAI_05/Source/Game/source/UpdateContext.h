@@ -30,6 +30,7 @@ struct AIEvent
 	{
 		//GuardNoticed,
 		GuardSpottedBandit,
+		BanditCaptured,
 	};
 
 	Type myType;

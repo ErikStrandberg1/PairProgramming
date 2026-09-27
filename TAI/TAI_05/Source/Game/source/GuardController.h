@@ -12,6 +12,7 @@ namespace AI
 	namespace
 	{
 		constexpr float VISION_RANGE = 0.1f;
+		constexpr float CAPTURE_RANGE = 0.03f;
 	}
 
 	class GuardController : public Controller
@@ -28,6 +29,7 @@ namespace AI
 		float GetStateTimer() const { return myStateTimer; }
 
 		bool CanSeeBandit(const Tga::Vector2f aMyPosition) const;
+		bool IsBanditCaptured(const Tga::Vector2f aMyPosition) const;
 
 		int GetCurrentWayPoint() const { return myInterestIdx; }
 		std::vector<Tga::Vector2f> GetWayPoints() const { return myPointOfInterests; }

@@ -44,7 +44,7 @@ void GameWorld::Init()
 	auto guardActor = std::make_unique<Actor>();
 	guardActor->Init(
 		"../data/sprites/killerRobo1.png",
-		0.16f,
+		0.3f,
 		myControllerFactory.CreateController(AI::eControllerType::eGuard, AI::eSteeringType::eWander),
 		{0.1f, 0.5f}
 	);

@@ -4,6 +4,7 @@
 
 struct UpdateContext;
 struct AIEvent;
+class Actor;
 
 namespace AI
 {
@@ -36,11 +37,14 @@ namespace AI
 		virtual eControllerType GetType() const = 0;
 		virtual bool ShouldFaceVelocity() const { return true; }
 
+		virtual void SetOwner(Actor* aOwner) { myOwner = aOwner; }
+
 		float myMaxSpeed = 3;
 		float myMaxForce = 1;
 
 	protected:
 		eSteeringType mySteeringType = eSteeringType::eSeek;
+		Actor* myOwner = nullptr;
 	};
 
 	class ControllerFactory

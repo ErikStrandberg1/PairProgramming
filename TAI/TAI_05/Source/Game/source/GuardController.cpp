@@ -17,7 +17,7 @@ AI::GuardController::GuardController()
 	SetState(GuardStates::Patrol);
 
 	myPointOfInterests.emplace_back(0.1f, 0.2f);
-	myPointOfInterests.emplace_back(0.1f, 0.2f);
+	myPointOfInterests.emplace_back(0.2f, 0.4f);
 	myPointOfInterests.emplace_back(0.3f, 0.72f);
 	myPointOfInterests.emplace_back(0.7f, 0.52f);
 }
@@ -31,15 +31,6 @@ Tga::Vector2f GuardController::Update(const UpdateContext& updateContext, const 
 	if (myState == nullptr)
 	{
 		return Tga::Vector2f{};
-	}
-
-	auto banditPos = PollingStation::GetInstance().GetBanditPosition();
-	constexpr float catchRange = 0.01f;
-	if ((aUpdateMoveContext.pos - banditPos).LengthSqr() > catchRange * catchRange)
-	{
-		AIEvent event;
-		event.myType = AIEvent::Type::GuardSpottedBandit;
-		AIEventManager::GetInstance().SendEvent(event);
 	}
 
 	myStateTimer += updateContext.myDeltaTime;
@@ -65,6 +56,17 @@ bool GuardController::CanSeeBandit(const Tga::Vector2f aMyPosition) const
 {
 	auto banditPos = PollingStation::GetInstance().GetBanditPosition();
 	if ((banditPos - aMyPosition).LengthSqr() < VISION_RANGE * VISION_RANGE)
+	{
+
+		return true;
+	}
+	return false;
+}
+
+bool GuardController::IsBanditCaptured(const Tga::Vector2f aMyPosition) const
+{
+	auto banditPos = PollingStation::GetInstance().GetBanditPosition();
+	if ((banditPos - aMyPosition).LengthSqr() < CAPTURE_RANGE * CAPTURE_RANGE)
 	{
 		return true;
 	}
