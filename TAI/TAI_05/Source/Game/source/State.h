@@ -13,6 +13,7 @@ namespace AI
 		Idle = 0,
 		Patrol = 1,
 		Chase = 2,
+		GoToDog = 3,
 	};
 
 	class State
@@ -56,6 +57,15 @@ namespace AI
 	{
 	public:
 		PatrolState() = default;
+		Tga::Vector2f Update(AI::GuardController& aGuardController,
+		                     const UpdateContext& aCtx,
+		                     const UpdateMoveContext& aMoveCtx) override;
+	};
+
+	class GoToDogState : public State
+	{
+	public:
+		GoToDogState() = default;
 		Tga::Vector2f Update(AI::GuardController& aGuardController,
 		                     const UpdateContext& aCtx,
 		                     const UpdateMoveContext& aMoveCtx) override;

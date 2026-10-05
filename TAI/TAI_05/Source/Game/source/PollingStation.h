@@ -7,23 +7,24 @@
 
 namespace AI
 {
+	constexpr float HIDE_RADIUS = 0.05f;
+
 	class PollingStation
 	{
 	public:
 		static PollingStation& GetInstance();
 
-		void Init(std::vector<Actor*> aActors, Actor* aPlayer, std::vector<Tga::Vector2f> aHidingSpots);
+		void Init(std::vector<Actor*> aActors, Actor* aPlayer, std::vector<Tga::Vector2f> aHidingSpots,
+		          std::vector<Tga::Vector2f> aWaterSpots);
 		Tga::Vector2f GetPlayerPosition() const;
 		Tga::Vector2f GetGuardPosition() const;
 		Tga::Vector2f GetBanditPosition() const;
+		Tga::Vector2f GetDogPosition() const;
 
 		std::span<Actor*> GetActors() { return myActors; }
 		std::vector<Tga::Vector2f> GetHidingSpots() const;
-
-		void SetBanditEscaped() { myBanditEscaped = true; }
-		bool HasBanditEscaped() const { return myBanditEscaped; }
-		void AddBanditCapture() { ++myBanditCaptures; }
-		int GetBanditCaptures() const { return myBanditCaptures; }
+		std::vector<Tga::Vector2f> GetWaterSpots() const;
+		bool IsBanditHiding(Tga::Vector2f* outHidingSpot = nullptr) const;
 
 		~PollingStation() = default;
 
@@ -36,11 +37,10 @@ namespace AI
 		Actor* myPlayer;
 		Actor* myGuard;
 		Actor* myBandit;
+		Actor* myDog;
 
 		std::vector<Actor*> myActors;
 		std::vector<Tga::Vector2f> myHidingSpots;
-
-		bool myBanditEscaped = false;
-		int myBanditCaptures = 0;
+		std::vector<Tga::Vector2f> myWaterSpots;
 	};
 }

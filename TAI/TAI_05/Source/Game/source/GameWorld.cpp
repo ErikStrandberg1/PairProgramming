@@ -40,6 +40,12 @@ void GameWorld::Init()
 		{0.75f, 0.25f},
 		{0.8f, 0.50f}
 	};
+	std::vector<Tga::Vector2f> waterSpots = {
+		{0.6f, 0.1f},
+		{0.72f, 0.18f},
+		{0.2f, 0.86f},
+		{0.5f, 0.74f},
+	};
 	for (auto& spot : hidingSpots)
 	{
 		spot += {AI::RandomRange(-0.04f, 0.04f), AI::RandomRange(-0.04f, 0.04f)};
@@ -62,47 +68,75 @@ void GameWorld::Init()
 	auto guardActor = std::make_unique<Actor>();
 	guardActor->Init(
 		"../data/sprites/killerRobo1.png",
-		0.24f,
+		0.16f,
 		myControllerFactory.CreateController(AI::eControllerType::eGuard, AI::eSteeringType::eWander),
 		{0.1f, 0.5f}
 	);
 	myActors.push_back(std::move(guardActor));
 
+	myBandit = static_cast<AI::BanditController*>(
+		myControllerFactory.CreateController(AI::eControllerType::eBandit, AI::eSteeringType::eWander));
 
 	auto banditActor = std::make_unique<Actor>();
 	banditActor->Init(
 		"../data/sprites/bandit.png",
-		0.13f,
-		myControllerFactory.CreateController(AI::eControllerType::eBandit, AI::eSteeringType::eWander),
+		0.09f,
+		myBandit,
 		{0.9f, 0.5f}
 	);
 	myActors.push_back(std::move(banditActor));
 
-	int computerSpots = (int)hidingSpots.size();
-	for (int i = 0; i < computerSpots; ++i)
+	auto dogActor = std::make_unique<Actor>();
+	dogActor->Init(
+		"../data/sprites/dog.png",
+		0.2f,
+		myControllerFactory.CreateController(AI::eControllerType::eDog, AI::eSteeringType::eWander),
+		{0.15f, 0.5f}
+	);
+	myActors.push_back(std::move(dogActor));
+
+	int bushesCount = (int)hidingSpots.size();
+	for (int i = 0; i < bushesCount; ++i)
 	{
-		auto computer = std::make_unique<Actor>();
+		auto bush = std::make_unique<Actor>();
 		Vector2f startPos = hidingSpots[i];
 
 		float speed = 0;
-		computer->Init(
+		bush->Init(
 			"../data/sprites/bush.png",
 			speed,
 			myControllerFactory.CreateController(AI::eControllerType::eDummy, AI::eSteeringType::eWander),
 			startPos
 		);
-		computer->SetSize(Actor::DEFAULT_SIZE * 2.f);
+		bush->SetSize(Actor::DEFAULT_SIZE * 2.f);
 
-		myActors.push_back(std::move(computer));
+		myActors.push_back(std::move(bush));
 	}
 
+	int waterSpotSize = (int)waterSpots.size();
+	for (int i = 0; i < waterSpotSize; ++i)
+	{
+		auto waterSpot = std::make_unique<Actor>();
+		Vector2f startPos = waterSpots[i];
+
+		float speed = 0;
+		waterSpot->Init(
+			"../data/sprites/water_tap.png",
+			speed,
+			myControllerFactory.CreateController(AI::eControllerType::eDummy, AI::eSteeringType::eWander),
+			startPos
+		);
+		waterSpot->SetSize(Actor::DEFAULT_SIZE * 1.f);
+
+		myActors.push_back(std::move(waterSpot));
+	}
 	std::vector<Actor*> tempActors = {};
 	tempActors.reserve(myActors.size());
 	for (const auto& actor : myActors)
 	{
 		tempActors.push_back(actor.get());
 	}
-	pollingStation.Init(std::move(tempActors), myPlayer, hidingSpots);
+	pollingStation.Init(std::move(tempActors), myPlayer, hidingSpots, waterSpots);
 
 	myWinTitle = std::make_unique<Tga::Text>("Text/arial.ttf", Tga::FontSize_48);
 	myWinTitle->SetColor({1.f, 0.85f, 0.2f, 1.f});
@@ -119,7 +153,7 @@ void GameWorld::Init()
 
 void GameWorld::Update(const UpdateContext& context)
 {
-	if (AI::PollingStation::GetInstance().HasBanditEscaped())
+	if (myBandit->HasEscaped())
 	{
 		if (context.myInputManager->IsKeyPressed(VK_ESCAPE))
 		{
@@ -149,6 +183,7 @@ void GameWorld::Render()
 
 	Tga::SpriteDrawer& spriteDrawer(engine.GetGraphicsEngine().GetSpriteDrawer());
 
+
 	{
 		Tga::SpriteSharedData sharedData = {};
 		sharedData.myTexture = myBackgroundTexture;
@@ -165,7 +200,7 @@ void GameWorld::Render()
 		actor->Render();
 	}
 
-	if (AI::PollingStation::GetInstance().HasBanditEscaped())
+	if (myBandit->HasEscaped())
 	{
 		RenderWinScreen();
 	}
@@ -189,7 +224,7 @@ void GameWorld::RenderWinScreen()
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
 
-	const int captures = AI::PollingStation::GetInstance().GetBanditCaptures();
+	const int captures = myBandit->GetCaptures();
 	std::string information = std::format("Reached the goal in {:.1f} s  -  caught {} time{}",
 	                                      myElapsedTime, captures, captures == 1 ? "" : "s");
 	myWinInfo->SetText(information);
@@ -211,3 +246,4 @@ void GameWorld::RenderWinScreen()
 
 	graphicsStateStack.Pop();
 }
+

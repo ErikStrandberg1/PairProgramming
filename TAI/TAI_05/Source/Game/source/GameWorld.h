@@ -14,6 +14,11 @@ namespace Tga
 	class Text;
 }
 
+namespace AI
+{
+	class BanditController;
+}
+
 class GameWorld
 {
 public:
@@ -30,6 +35,7 @@ public:
 
 private:
 	Actor* myPlayer;
+	AI::BanditController* myBandit = nullptr;
 	std::vector<std::unique_ptr<Actor>> myActors;
 	std::unique_ptr<AI::PollingStation> myPollingStation;
 	AI::ControllerFactory myControllerFactory;

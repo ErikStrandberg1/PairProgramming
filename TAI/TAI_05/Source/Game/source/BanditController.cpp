@@ -13,12 +13,16 @@ AI::BanditController::BanditController()
 	auto goToGoalNode = std::make_unique<GoToGoalNode>();
 	auto fleeNode = std::make_unique<FleeNode>();
 	auto hideNode = std::make_unique<HideNode>();
+	auto hideFromDogNode = std::make_unique<HideFromDogNode>();
 
 	auto isHidingSpotNear = std::make_unique<IsHidingSpotNearNode>(hideNode.get(), fleeNode.get());
-	auto isGuardNear = std::make_unique<IsGuardNearNode>(isHidingSpotNear.get(), goToGoalNode.get());
+	auto isDogNear = std::make_unique<IsDogNearNode>(hideFromDogNode.get(), goToGoalNode.get());
+	auto isGuardNear = std::make_unique<IsGuardNearNode>(isHidingSpotNear.get(), isDogNear.get());
 
-	myRootNode = isGuardNear.get(); 
+	myRootNode = isGuardNear.get();
 
+	myNodes.emplace_back(std::move(isDogNear));
+	myNodes.emplace_back(std::move(hideFromDogNode));
 	myNodes.emplace_back(std::move(isGuardNear));
 	myNodes.emplace_back(std::move(isHidingSpotNear));
 	myNodes.emplace_back(std::move(goToGoalNode));
@@ -39,7 +43,7 @@ Tga::Vector2f AI::BanditController::Update(const UpdateContext& updateContext,
 		myStartPosition = aUpdateMoveContext.pos;
 		myHasStartPosition = true;
 	}
-	if ((aUpdateMoveContext.pos - myGoalSpot).LengthSqr() < 0.0001f)
+	if (IsWithinRange(aUpdateMoveContext.pos, myGoalSpot, GOAL_REACHED_RADIUS))
 	{
 		AIEvent event;
 		event.myType = AIEvent::Type::BanditReachedGoal;
@@ -69,13 +73,13 @@ void AI::BanditController::OnEvent(const AIEvent& aEvent)
 {
 	if (aEvent.myType == AIEvent::Type::BanditCaptured)
 	{
-		PollingStation::GetInstance().AddBanditCapture();
+		++myCaptures;
 		Death();
 		return;
 	}
 	if (aEvent.myType == AIEvent::Type::BanditReachedGoal)
 	{
-		PollingStation::GetInstance().SetBanditEscaped();
+		myHasEscaped = true;
 		return;
 	}
 
@@ -87,3 +91,12 @@ void BanditController::Death()
 	myHasDied = true;
 	myDeathTimer = 0.f;
 }
+
+void BanditController::SetTargetHidingSpot(Tga::Vector2f aHidingSpot)
+{
+	myTargetSpot = aHidingSpot;
+	AIEvent event;
+	event.myType = AIEvent::Type::BanditHiding;
+	AIEventManager::GetInstance().SendEvent(event);
+}
+

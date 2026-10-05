@@ -9,13 +9,6 @@ struct UpdateContext;
 
 namespace AI
 {
-	namespace
-	{
-		constexpr float VISION_RANGE = 0.22f;
-		constexpr float CAPTURE_RANGE = 0.03f;
-		constexpr float HIDE_RADIUS = 0.05f;
-	}
-
 	class GuardController : public Controller
 	{
 	public:
@@ -36,7 +29,16 @@ namespace AI
 		std::vector<Tga::Vector2f> GetWayPoints() const { return myPointOfInterests; }
 		void NextWayPoint();
 
+		bool TryStartChase(const Tga::Vector2f& aMyPosition);
+
+		bool HasDogFoundBandit() const { return myDogHasFoundBandit; }
+		void ClearDogFoundBandit() { myDogHasFoundBandit = false; }
+		const Tga::Vector2f& GetDogFoundBanditPos() const { return myDogFoundBanditPos; }
+
 	private:
+		bool myDogHasFoundBandit = false;
+		Tga::Vector2f myDogFoundBanditPos;
+
 		std::vector<std::unique_ptr<State>> myAvailableStates;
 		State* myState = nullptr;
 

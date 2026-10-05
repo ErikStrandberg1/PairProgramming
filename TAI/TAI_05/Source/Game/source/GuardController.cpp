@@ -14,6 +14,8 @@ AI::GuardController::GuardController()
 	myAvailableStates.emplace_back(std::make_unique<IdleState>());
 	myAvailableStates.emplace_back(std::make_unique<PatrolState>());
 	myAvailableStates.emplace_back(std::make_unique<ChaseState>());
+	myAvailableStates.emplace_back(std::make_unique<GoToDogState>());
+
 	SetState(GuardStates::Patrol);
 
 	myPointOfInterests.emplace_back(0.15f, 0.5f);
@@ -38,6 +40,19 @@ void GuardController::NextWayPoint()
 	myInterestIdx = next;
 }
 
+bool GuardController::TryStartChase(const Tga::Vector2f& aMyPosition)
+{
+	if (!CanSeeBandit(aMyPosition))
+	{
+		return false;
+	}
+	AIEvent event;
+	event.myType = AIEvent::Type::GuardSpottedBandit;
+	AIEventManager::GetInstance().SendEvent(event);
+	SetState(GuardStates::Chase);
+	return true;
+}
+
 AI::GuardController::~GuardController()
 {
 }
@@ -60,6 +75,11 @@ Tga::Vector2f GuardController::Update(const UpdateContext& updateContext, const 
 void GuardController::OnEvent(const AIEvent& aEvent)
 {
 	Controller::OnEvent(aEvent);
+	if (aEvent.myType == AIEvent::Type::DogFoundGuard)
+	{
+		myDogHasFoundBandit = true;
+		myDogFoundBanditPos = aEvent.myPosition;
+	}
 }
 
 void GuardController::SetState(GuardStates aGuardState)
@@ -70,29 +90,17 @@ void GuardController::SetState(GuardStates aGuardState)
 
 bool GuardController::CanSeeBandit(const Tga::Vector2f aMyPosition) const
 {
-	const Tga::Vector2f banditPos = PollingStation::GetInstance().GetBanditPosition();
-	auto hidingSpots = PollingStation::GetInstance().GetHidingSpots();
-
-	for (auto hidingSpot : hidingSpots)
+	auto& polling = PollingStation::GetInstance();
+	constexpr float visionRange = 0.22f;
+	if (polling.IsBanditHiding())
 	{
-		if ((banditPos - hidingSpot).LengthSqr() < HIDE_RADIUS * HIDE_RADIUS)
-		{
-			return false;
-		}
+		return false;
 	}
-	if ((banditPos - aMyPosition).LengthSqr() < VISION_RANGE * VISION_RANGE)
-	{
-		return true;
-	}
-	return false;
+	return IsWithinRange(polling.GetBanditPosition(), aMyPosition, visionRange);
 }
 
 bool GuardController::IsBanditCaptured(const Tga::Vector2f aMyPosition) const
 {
-	auto banditPos = PollingStation::GetInstance().GetBanditPosition();
-	if ((banditPos - aMyPosition).LengthSqr() < CAPTURE_RANGE * CAPTURE_RANGE)
-	{
-		return true;
-	}
-	return false;
+	constexpr float captureRange = 0.03f;
+	return IsWithinRange(PollingStation::GetInstance().GetBanditPosition(), aMyPosition, captureRange);
 }

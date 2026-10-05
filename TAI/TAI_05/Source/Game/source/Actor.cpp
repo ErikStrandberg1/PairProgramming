@@ -38,6 +38,7 @@ Actor::Actor(const char* aSpritePath, const float aSpeed, AI::Controller* aAICon
 
 Actor::~Actor()
 {
+	AIEventManager::GetInstance().Unsubscribe(myController);
 }
 
 void Actor::Init(const char* aSpritePath, const float aSpeed, AI::Controller* aAIController,

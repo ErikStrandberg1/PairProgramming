@@ -2,6 +2,7 @@
 #include "Controller.h"
 
 #include "BanditController.h"
+#include "BehaviourTreeController.h"
 #include "FlockController.h"
 #include "GuardController.h"
 #include "SeekController.h"
@@ -56,6 +57,10 @@ namespace AI
 			case eControllerType::eBandit:
 			{
 				return new BanditController();
+			}
+			case eControllerType::eDog:
+			{
+				return new BehaviourTreeController();
 			}
 		}
 		return nullptr;

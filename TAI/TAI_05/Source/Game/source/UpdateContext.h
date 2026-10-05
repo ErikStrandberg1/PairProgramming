@@ -1,6 +1,8 @@
 #pragma once
 #include <tge/math/vector2.h>
 
+#include "tge/sprite/sprite.h"
+
 namespace Tga
 {
 	class InputManager;
@@ -33,6 +35,10 @@ struct AIEvent
 		BanditCaptured,
 		BanditReachedGoal,
 
+		BanditHiding,
+		BanditNotHiding,
+
+		DogFoundGuard,
 	};
 
 	Type myType;

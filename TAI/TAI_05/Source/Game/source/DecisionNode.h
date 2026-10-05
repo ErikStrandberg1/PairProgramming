@@ -34,6 +34,13 @@ namespace AI
 		                       const UpdateMoveContext& aMoveCtx) override;
 	};
 
+	class HideFromDogNode : public DecisionNode
+	{
+	public:
+		Tga::Vector2f Evaluate(BanditController& aBandit, const UpdateContext& aCtx,
+		                       const UpdateMoveContext& aMoveCtx) override;
+	};
+
 	class ConditionNode : public DecisionNode
 	{
 	public:
@@ -51,6 +58,16 @@ namespace AI
 	};
 
 	class IsGuardNearNode : public ConditionNode
+	{
+	public:
+		using ConditionNode::ConditionNode;
+
+	protected:
+		bool Condition(BanditController& aBandit, const UpdateContext& aCtx,
+		               const UpdateMoveContext& aMoveCtx) override;
+	};
+
+	class IsDogNearNode : public ConditionNode
 	{
 	public:
 		using ConditionNode::ConditionNode;

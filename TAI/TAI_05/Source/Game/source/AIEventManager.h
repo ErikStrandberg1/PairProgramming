@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tge/math/vector.h>
 #include "Actor.h"
 #include "UpdateContext.h"

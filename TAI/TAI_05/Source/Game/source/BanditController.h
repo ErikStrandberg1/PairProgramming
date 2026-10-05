@@ -10,6 +10,7 @@ namespace AI
 	namespace
 	{
 		constexpr float DEATH_DURATION = 2.1f;
+		constexpr float GOAL_REACHED_RADIUS = 0.01f;
 	}
 	class BanditController : public Controller
 	{
@@ -24,10 +25,13 @@ namespace AI
 		eControllerType GetType() const override { return eControllerType::eBandit; }
 
 		std::vector<Tga::Vector2f> GetHidingSpots() const { return myHidingSpots; }
-		void SetTargetHidingSpot(Tga::Vector2f aHidingSpot) { myTargetSpot = aHidingSpot; }
+		void SetTargetHidingSpot(Tga::Vector2f aHidingSpot);
 		Tga::Vector2f GetHidingTarget() const { return myTargetSpot; }
 
 		Tga::Vector2f GetGoalSpot() const { return myGoalSpot; }
+
+		bool HasEscaped() const { return myHasEscaped; }
+		int GetCaptures() const { return myCaptures; }
 
 	private:
 		std::vector<std::unique_ptr<DecisionNode>> myNodes;
@@ -35,17 +39,14 @@ namespace AI
 
 		std::vector<Tga::Vector2f> myHidingSpots;
 		Tga::Vector2f myTargetSpot;
-
 		Tga::Vector2f myGoalSpot;
-
+		Tga::Vector2f myStartPosition;
 		Tga::Vector2f myTargetPosition;
-		Actor* mySpottedBandit = nullptr;
-		float myWanderAngle = 0.f;
 
 		float myDeathTimer = 0.f;
 		bool myHasDied = false;
-
-		Tga::Vector2f myStartPosition;
 		bool myHasStartPosition = false;
+		bool myHasEscaped = false;
+		int myCaptures = 0;
 	};
 }

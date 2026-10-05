@@ -2,7 +2,8 @@
 #include "Controller.h"
 #include "PollingStation.h"
 
-Tga::Vector2f AI::Steering::Seek(const UpdateMoveContext& aUpdateMoveContext, Tga::Vector2f target,
+Tga::Vector2f AI::Steering::Seek(const UpdateMoveContext& aUpdateMoveContext,
+                                 Tga::Vector2f target,
                                  float maxSpeed,
                                  float maxForce)
 {
@@ -21,9 +22,12 @@ Tga::Vector2f AI::Steering::Seek(const UpdateMoveContext& aUpdateMoveContext, Tg
 	return steering;
 }
 
-Tga::Vector2f AI::Steering::Wander(const UpdateMoveContext& aUpdateMoveContext, float& wanderAngle, float dt,
+Tga::Vector2f AI::Steering::Wander(const UpdateMoveContext& aUpdateMoveContext,
+                                   float& wanderAngle,
+                                   float dt,
                                    float maxSpeed,
-                                   float maxForce, float rate)
+                                   float maxForce,
+                                   float rate)
 {
 	const float offset = 150.f;
 	const float radius = 100.f;
@@ -90,7 +94,9 @@ Tga::Vector2f AI::Steering::Separation(const UpdateMoveContext& aUpdateMoveConte
 	return steering;
 }
 
-Tga::Vector2f AI::Steering::Cohesion(const UpdateMoveContext& aUpdateMoveContext, float aRange, float aMaxSpeed,
+Tga::Vector2f AI::Steering::Cohesion(const UpdateMoveContext& aUpdateMoveContext,
+                                     float aRange,
+                                     float aMaxSpeed,
                                      float aMaxForce)
 {
 	const float rangeSqr = aRange * aRange;
@@ -134,7 +140,8 @@ Tga::Vector2f AI::Steering::Cohesion(const UpdateMoveContext& aUpdateMoveContext
 	return steering * std::min(dist / aRange, 1.f);
 }
 
-Tga::Vector2f AI::Steering::VelocityMatching(const UpdateMoveContext& aUpdateMoveContext, float aRange,
+Tga::Vector2f AI::Steering::VelocityMatching(const UpdateMoveContext& aUpdateMoveContext,
+                                             float aRange,
                                              float aMaxForce)
 {
 	const float rangeSqr = aRange * aRange;
