@@ -26,6 +26,14 @@ namespace AI
 		std::vector<Tga::Vector2f> GetWaterSpots() const;
 		bool IsBanditHiding(Tga::Vector2f* outHidingSpot = nullptr) const;
 
+		void SetPreys(std::vector<Actor*> aPreys);
+		void SetPredators(std::vector<Actor*> aPredators);
+		const std::vector<Actor*>& GetPreys() const { return myPreys; }
+		const std::vector<Actor*>& GetPredators() const { return myPredators; }
+		int GetAlivePredatorCount() const;
+		Actor* GetClosestPrey(const Tga::Vector2f& aPosition, float aRange) const;
+		Actor* GetClosestPredator(const Tga::Vector2f& aPosition, float aRange) const;
+
 		~PollingStation() = default;
 
 	private:
@@ -33,6 +41,12 @@ namespace AI
 
 		PollingStation(const PollingStation&) = delete;
 		PollingStation& operator=(const PollingStation&) = delete;
+
+		Actor* GetClosestActor(const std::vector<Actor*>& aActors, const Tga::Vector2f& aPosition,
+		                       float aRange) const;
+
+		std::vector<Actor*> myPreys;
+		std::vector<Actor*> myPredators;
 
 		Actor* myPlayer;
 		Actor* myGuard;

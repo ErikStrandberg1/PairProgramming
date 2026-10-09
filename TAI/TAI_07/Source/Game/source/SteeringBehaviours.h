@@ -9,4 +9,6 @@ namespace AI::Steering
 	Tga::Vector2f Separation(const UpdateMoveContext&, float aRange, float aMaxForce);
 	Tga::Vector2f Cohesion(const UpdateMoveContext&, float aRange, float aMaxSpeed, float aMaxForce);
 	Tga::Vector2f VelocityMatching(const UpdateMoveContext&, float aRange, float aMaxForce);
+	Tga::Vector2f StayInside(const UpdateMoveContext&, Tga::Vector2f aMin, Tga::Vector2f aMax, float aMargin,
+	                         float aMaxForce);
 }

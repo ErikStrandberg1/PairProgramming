@@ -7,17 +7,7 @@
 #include "Controller.h"
 #include "PollingStation.h"
 #include "AIEventManager.h"
-
-namespace Tga
-{
-	class Texture;
-	class Text;
-}
-
-namespace AI
-{
-	class BanditController;
-}
+#include "WorldDirector.h"
 
 class GameWorld
 {
@@ -31,23 +21,26 @@ public:
 	void Render();
 	Tga::Vector2f GetScreenMin() { return myScreenMin; };
 	Tga::Vector2f GetScreenMax() { return myScreenMax; };
-	void RenderWinScreen();
+	Tga::Vector2f GetFenceMin() const { return myFenceMin; }
+	Tga::Vector2f GetFenceMax() const { return myFenceMax; }
+
+	void SpawnPrey(const Tga::Vector2f& aPosition);
+	void SpawnPredator(const Tga::Vector2f& aPosition);
+	Tga::Vector2f GetRandomPositionInsideFence() const;
 
 private:
-	Actor* myPlayer;
-	AI::BanditController* myBandit = nullptr;
+	void RemoveDeadActors();
+	void UpdatePollingStation();
+	void RenderFence();
+	void RenderImGui();
+
 	std::vector<std::unique_ptr<Actor>> myActors;
-	std::unique_ptr<AI::PollingStation> myPollingStation;
 	AI::ControllerFactory myControllerFactory;
-	AIEventManager myAIEventManager;
-	Tga::Texture* myBackgroundTexture;
+	AI::WorldDirector myWorldDirector;
 
 	Tga::Vector2f myScreenMin;
 	Tga::Vector2f myScreenMax;
+	Tga::Vector2f myFenceMin = {0.08f, 0.14f};
+	Tga::Vector2f myFenceMax = {0.92f, 0.86f};
 	Tga::Camera camera;
-
-	float myElapsedTime = 0.f;
-	std::unique_ptr<Tga::Text> myWinTitle;
-	std::unique_ptr<Tga::Text> myWinInfo;
-	std::unique_ptr<Tga::Text> myWinHint;
 };

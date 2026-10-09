@@ -176,3 +176,31 @@ Tga::Vector2f AI::Steering::VelocityMatching(const UpdateMoveContext& aUpdateMov
 }
 
 
+Tga::Vector2f AI::Steering::StayInside(const UpdateMoveContext& aUpdateMoveContext,
+                                       Tga::Vector2f aMin,
+                                       Tga::Vector2f aMax,
+                                       float aMargin,
+                                       float aMaxForce)
+{
+	const auto pos = aUpdateMoveContext.pos;
+	Tga::Vector2f steering = {};
+
+	if (pos.x < aMin.x + aMargin)
+	{
+		steering.x += 1.f;
+	}
+	else if (pos.x > aMax.x - aMargin)
+	{
+		steering.x -= 1.f;
+	}
+	if (pos.y < aMin.y + aMargin)
+	{
+		steering.y += 1.f;
+	}
+	else if (pos.y > aMax.y - aMargin)
+	{
+		steering.y -= 1.f;
+	}
+
+	return steering * aMaxForce;
+}

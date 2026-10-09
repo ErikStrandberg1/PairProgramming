@@ -5,19 +5,24 @@
 
 #include <tge/drawers/SpriteDrawer.h>
 #include <tge/texture/TextureManager.h>
-#include <tge/drawers/DebugDrawer.h>
 #include <tge/engine.h>
 #include "UpdateContext.h"
 #include <tge/input/InputManager.h>
-#include <tge/text/text.h>
+#include <imgui/imgui.h>
 
 #include <cstdio>
 #include <ctime>
 
-#include "BanditController.h"
-
-
 using namespace Tga;
+
+namespace
+{
+	constexpr int START_PREY_COUNT = 20;
+	constexpr int START_PREDATOR_COUNT = 3;
+	constexpr float PREY_SPEED = 0.09f;
+	constexpr float PREDATOR_SPEED = 0.13f;
+	constexpr float FENCE_THICKNESS = 0.002f;
+}
 
 GameWorld::GameWorld()
 {
@@ -31,219 +36,172 @@ void GameWorld::Init()
 {
 	srand(static_cast<unsigned>(time(nullptr)));
 
-	std::vector<Tga::Vector2f> hidingSpots = {
-		{0.3f, 0.1f},
-		{0.35f, 0.84f},
-		{0.4f, 0.3f},
-		{0.55f, 0.65f},
-		{0.6f, 0.8f},
-		{0.75f, 0.25f},
-		{0.8f, 0.50f}
-	};
-	std::vector<Tga::Vector2f> waterSpots = {
-		{0.6f, 0.1f},
-		{0.72f, 0.18f},
-		{0.2f, 0.86f},
-		{0.5f, 0.74f},
-	};
-	for (auto& spot : hidingSpots)
+	for (int i = 0; i < START_PREY_COUNT; ++i)
 	{
-		spot += {AI::RandomRange(-0.04f, 0.04f), AI::RandomRange(-0.04f, 0.04f)};
+		SpawnPrey(GetRandomPositionInsideFence());
+	}
+	for (int i = 0; i < START_PREDATOR_COUNT; ++i)
+	{
+		SpawnPredator(GetRandomPositionInsideFence());
 	}
 
-	AI::PollingStation& pollingStation =
-		AI::PollingStation::GetInstance();
-
-	auto player = std::make_unique<Actor>();
-
-	player->Init(
-		"../data/sprites/hacker.png",
-		0.2f,
-		myControllerFactory.CreateController(AI::eControllerType::eDummy, AI::eSteeringType::eWander),
-		{0.f, -0.5f}
-	);
-	myPlayer = player.get();
-	myActors.push_back(std::move(player));
-
-	auto guardActor = std::make_unique<Actor>();
-	guardActor->Init(
-		"../data/sprites/killerRobo1.png",
-		0.16f,
-		myControllerFactory.CreateController(AI::eControllerType::eGuard, AI::eSteeringType::eWander),
-		{0.1f, 0.5f}
-	);
-	myActors.push_back(std::move(guardActor));
-
-	myBandit = static_cast<AI::BanditController*>(
-		myControllerFactory.CreateController(AI::eControllerType::eBandit, AI::eSteeringType::eWander));
-
-	auto banditActor = std::make_unique<Actor>();
-	banditActor->Init(
-		"../data/sprites/bandit.png",
-		0.09f,
-		myBandit,
-		{0.9f, 0.5f}
-	);
-	myActors.push_back(std::move(banditActor));
-
-	auto dogActor = std::make_unique<Actor>();
-	dogActor->Init(
-		"../data/sprites/dog.png",
-		0.2f,
-		myControllerFactory.CreateController(AI::eControllerType::eDog, AI::eSteeringType::eWander),
-		{0.15f, 0.5f}
-	);
-	myActors.push_back(std::move(dogActor));
-
-	int bushesCount = (int)hidingSpots.size();
-	for (int i = 0; i < bushesCount; ++i)
-	{
-		auto bush = std::make_unique<Actor>();
-		Vector2f startPos = hidingSpots[i];
-
-		float speed = 0;
-		bush->Init(
-			"../data/sprites/bush.png",
-			speed,
-			myControllerFactory.CreateController(AI::eControllerType::eDummy, AI::eSteeringType::eWander),
-			startPos
-		);
-		bush->SetSize(Actor::DEFAULT_SIZE * 2.f);
-
-		myActors.push_back(std::move(bush));
-	}
-
-	int waterSpotSize = (int)waterSpots.size();
-	for (int i = 0; i < waterSpotSize; ++i)
-	{
-		auto waterSpot = std::make_unique<Actor>();
-		Vector2f startPos = waterSpots[i];
-
-		float speed = 0;
-		waterSpot->Init(
-			"../data/sprites/water_tap.png",
-			speed,
-			myControllerFactory.CreateController(AI::eControllerType::eDummy, AI::eSteeringType::eWander),
-			startPos
-		);
-		waterSpot->SetSize(Actor::DEFAULT_SIZE * 1.f);
-
-		myActors.push_back(std::move(waterSpot));
-	}
-	std::vector<Actor*> tempActors = {};
-	tempActors.reserve(myActors.size());
-	for (const auto& actor : myActors)
-	{
-		tempActors.push_back(actor.get());
-	}
-	pollingStation.Init(std::move(tempActors), myPlayer, hidingSpots, waterSpots);
-
-	myWinTitle = std::make_unique<Tga::Text>("Text/arial.ttf", Tga::FontSize_48);
-	myWinTitle->SetColor({1.f, 0.85f, 0.2f, 1.f});
-	myWinTitle->SetText("The bandit has won!");
-
-	myWinInfo = std::make_unique<Tga::Text>("Text/arial.ttf", Tga::FontSize_24);
-	myWinInfo->SetColor({1.f, 1.f, 1.f, 1.f});
-
-	myWinHint = std::make_unique<Tga::Text>("Text/arial.ttf", Tga::FontSize_18);
-	myWinHint->SetColor({0.75f, 0.75f, 0.75f, 1.f});
-	myWinHint->SetText("Press 'ESC' to quit");
+	UpdatePollingStation();
 }
-
 
 void GameWorld::Update(const UpdateContext& context)
 {
-	if (myBandit->HasEscaped())
-	{
-		if (context.myInputManager->IsKeyPressed(VK_ESCAPE))
-		{
-			PostQuitMessage(0);
-		}
-		return;
-	}
-
-	myElapsedTime += context.myDeltaTime;
-
 	for (auto& actor : myActors)
 	{
 		actor->Update(context);
 	}
+
+	RemoveDeadActors();
+	UpdatePollingStation();
+
+	myWorldDirector.Update(*this, context.myDeltaTime);
 }
 
 void GameWorld::Render()
 {
 	auto& engine = *Tga::Engine::GetInstance();
 
-	Tga::Vector2f resolution = Tga::Vector2f((float)Tga::DX11::GetResolution().x, (float)Tga::DX11::GetResolution().y);
 	myScreenMin = {0.f, 0.f};
 	myScreenMax = {1.0f, 1.0f};
 
 	camera.SetOrtographicProjection(myScreenMin.x, myScreenMax.x, myScreenMin.y, myScreenMax.y, -1.0f, 1.0f);
 	engine.GetGraphicsEngine().GetGraphicsStateStack().SetCamera(camera);
 
-	Tga::SpriteDrawer& spriteDrawer(engine.GetGraphicsEngine().GetSpriteDrawer());
+	RenderFence();
 
-
-	{
-		Tga::SpriteSharedData sharedData = {};
-		sharedData.myTexture = myBackgroundTexture;
-
-		Tga::Sprite2DInstanceData instanceData = {};
-		instanceData.myPivot = {0.0f, 1.0f};
-		instanceData.myPosition = {0.0f, 0.0f};
-		instanceData.mySize = {1.0f, 1.0f};
-
-		spriteDrawer.Draw(sharedData, instanceData);
-	}
 	for (auto& actor : myActors)
 	{
 		actor->Render();
 	}
 
-	if (myBandit->HasEscaped())
-	{
-		RenderWinScreen();
-	}
+#ifndef _RETAIL
+	RenderImGui();
+#endif
 }
 
-void GameWorld::RenderWinScreen()
+void GameWorld::SpawnPrey(const Tga::Vector2f& aPosition)
+{
+	auto prey = std::make_unique<Actor>();
+	prey->Init(
+		"../data/sprites/sheep.png",
+		PREY_SPEED,
+		myControllerFactory.CreateController(AI::eControllerType::ePrey, AI::eSteeringType::eWander),
+		aPosition
+	);
+	prey->SetColor({0.1f, 0.9f, 0.1f, 1.f});
+	myActors.push_back(std::move(prey));
+}
+
+void GameWorld::SpawnPredator(const Tga::Vector2f& aPosition)
+{
+	auto predator = std::make_unique<Actor>();
+	predator->Init(
+		"../data/sprites/wolf.png",
+		PREDATOR_SPEED,
+		myControllerFactory.CreateController(AI::eControllerType::ePredator, AI::eSteeringType::eSeek),
+		aPosition
+	);
+	predator->SetColor({1.f, 0.1f, 0.1f, 1.f});
+	myActors.push_back(std::move(predator));
+}
+
+Tga::Vector2f GameWorld::GetRandomPositionInsideFence() const
+{
+	return {AI::RandomRange(myFenceMin.x, myFenceMax.x), AI::RandomRange(myFenceMin.y, myFenceMax.y)};
+}
+
+void GameWorld::RemoveDeadActors()
+{
+	std::erase_if(myActors, [](const std::unique_ptr<Actor>& aActor) { return aActor->IsDead(); });
+}
+
+void GameWorld::UpdatePollingStation()
+{
+	std::vector<Actor*> preys;
+	std::vector<Actor*> predators;
+
+	for (auto& actor : myActors)
+	{
+		if (actor->GetController() == nullptr)
+		{
+			continue;
+		}
+		if (actor->GetController()->GetType() == AI::eControllerType::ePrey)
+		{
+			preys.push_back(actor.get());
+		}
+		else if (actor->GetController()->GetType() == AI::eControllerType::ePredator)
+		{
+			predators.push_back(actor.get());
+		}
+	}
+
+	AI::PollingStation& pollingStation = AI::PollingStation::GetInstance();
+	pollingStation.SetPreys(std::move(preys));
+	pollingStation.SetPredators(std::move(predators));
+}
+
+void GameWorld::RenderFence()
 {
 	auto& engine = *Tga::Engine::GetInstance();
 	Tga::SpriteDrawer& spriteDrawer(engine.GetGraphicsEngine().GetSpriteDrawer());
 
-	{
-		Tga::SpriteSharedData sharedData = {};
-		sharedData.myTexture = engine.GetTextureManager().GetWhiteSquareTexture();
+	Tga::SpriteSharedData sharedData = {};
+	sharedData.myTexture = engine.GetTextureManager().GetWhiteSquareTexture();
 
-		Tga::Sprite2DInstanceData instanceData = {};
-		instanceData.myPivot = {0.5f, 0.5f};
-		instanceData.myPosition = {0.5f, 0.5f};
-		instanceData.mySize = {1.0f, 1.0f};
-		instanceData.myColor = {0.f, 0.f, 0.f, 0.65f};
+	const Tga::Vector2f center = (myFenceMin + myFenceMax) * 0.5f;
+	const Tga::Vector2f size = myFenceMax - myFenceMin;
 
-		spriteDrawer.Draw(sharedData, instanceData);
-	}
+	Tga::Sprite2DInstanceData instanceData = {};
+	instanceData.myPivot = {0.5f, 0.5f};
+	instanceData.myColor = {1.f, 0.f, 0.f, 1.f};
 
-	const int captures = myBandit->GetCaptures();
-	std::string information = std::format("Reached the goal in {:.1f} s  -  caught {} time{}",
-	                                      myElapsedTime, captures, captures == 1 ? "" : "s");
-	myWinInfo->SetText(information);
+	instanceData.mySize = {size.x + FENCE_THICKNESS, FENCE_THICKNESS};
+	instanceData.myPosition = {center.x, myFenceMin.y};
+	spriteDrawer.Draw(sharedData, instanceData);
+	instanceData.myPosition = {center.x, myFenceMax.y};
+	spriteDrawer.Draw(sharedData, instanceData);
 
-	Tga::GraphicsStateStack& graphicsStateStack = engine.GetGraphicsEngine().GetGraphicsStateStack();
-	graphicsStateStack.Push();
-	graphicsStateStack.SetDefaultCamera();
-
-	const Tga::Vector2f resolution = {(float)Tga::DX11::GetResolution().x, (float)Tga::DX11::GetResolution().y};
-
-	auto renderCentered = [&resolution](Tga::Text& aText, float aHeightRatio)
-	{
-		aText.SetPosition({resolution.x * 0.5f - aText.GetWidth() * 0.5f, resolution.y * aHeightRatio});
-		aText.Render();
-	};
-	renderCentered(*myWinTitle, 0.58f);
-	renderCentered(*myWinInfo, 0.48f);
-	renderCentered(*myWinHint, 0.38f);
-
-	graphicsStateStack.Pop();
+	instanceData.mySize = {FENCE_THICKNESS, size.y + FENCE_THICKNESS};
+	instanceData.myPosition = {myFenceMin.x, center.y};
+	spriteDrawer.Draw(sharedData, instanceData);
+	instanceData.myPosition = {myFenceMax.x, center.y};
+	spriteDrawer.Draw(sharedData, instanceData);
 }
 
+void GameWorld::RenderImGui()
+{
+	AI::PollingStation& pollingStation = AI::PollingStation::GetInstance();
+
+	ImGui::SetNextWindowSize(ImVec2(300.f, 430.f), ImGuiCond_FirstUseEver);
+	ImGui::Begin("GameWorld ImGui");
+
+	ImGui::Text("Nr of prey: %d", static_cast<int>(pollingStation.GetPreys().size()));
+	ImGui::Text("Nr of predators: %d", static_cast<int>(pollingStation.GetPredators().size()));
+	ImGui::NewLine();
+
+	ImGui::Text("Director state: %s", myWorldDirector.GetStateName());
+	ImGui::NewLine();
+
+	if (ImGui::Button("Debug spawn prey"))
+	{
+		SpawnPrey(GetRandomPositionInsideFence());
+	}
+	if (ImGui::Button("Debug spawn predator"))
+	{
+		SpawnPredator(GetRandomPositionInsideFence());
+	}
+	ImGui::NewLine();
+
+	ImGui::Text("Increase prey threshold: %d", myWorldDirector.GetIncreasePreyThreshold());
+	ImGui::Text("Decrease prey threshold: %d", myWorldDirector.GetDecreasePreyThreshold());
+	ImGui::NewLine();
+
+	ImGui::Text("Prey reproduction interval: %.2f", myWorldDirector.GetPreyReproductionInterval());
+
+	ImGui::End();
+}

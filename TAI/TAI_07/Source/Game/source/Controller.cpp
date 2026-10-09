@@ -5,6 +5,8 @@
 #include "BehaviourTreeController.h"
 #include "FlockController.h"
 #include "GuardController.h"
+#include "PredatorController.h"
+#include "PreyController.h"
 #include "SeekController.h"
 #include "SeparationController.h"
 #include "UpdateContext.h"
@@ -61,6 +63,14 @@ namespace AI
 			case eControllerType::eDog:
 			{
 				return new BehaviourTreeController();
+			}
+			case eControllerType::ePrey:
+			{
+				return new PreyController();
+			}
+			case eControllerType::ePredator:
+			{
+				return new PredatorController();
 			}
 		}
 		return nullptr;

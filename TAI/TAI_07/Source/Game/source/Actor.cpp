@@ -39,6 +39,8 @@ Actor::Actor(const char* aSpritePath, const float aSpeed, AI::Controller* aAICon
 Actor::~Actor()
 {
 	AIEventManager::GetInstance().Unsubscribe(myController);
+	delete myController;
+	myController = nullptr;
 }
 
 void Actor::Init(const char* aSpritePath, const float aSpeed, AI::Controller* aAIController,
@@ -51,9 +53,6 @@ void Actor::Init(const char* aSpritePath, const float aSpeed, AI::Controller* aA
 	mySpeed = aSpeed;
 	myController = aAIController;
 	myPosition = aStartPosition;
-
-	const float startAngle = (float)rand() / (float)RAND_MAX * 2.f * FMath::Pi;
-	myVel = Tga::Vector2f(std::cos(startAngle), std::sin(startAngle)) * (aSpeed * 0.5f);
 
 	if (myController != nullptr)
 	{
@@ -91,6 +90,7 @@ void Actor::Render()
 			instanceData.myRotation += (FMath::Pi / 2);
 		}
 		instanceData.mySize = {mySize, mySize};
+		instanceData.myColor = myColor;
 		spriteDrawer.Draw(sharedData, instanceData);
 	}
 }
@@ -104,8 +104,7 @@ void Actor::Update(const UpdateContext& updateContext)
 
 	const Tga::Vector2f steeringForce = myController->Update(updateContext, {myPosition, myVel, this});
 	UpdateMovement(updateContext, steeringForce);
-	ScreenWrap(updateContext);
-	
+	KeepInsideFence(updateContext);
 }
 
 const Tga::Vector2f& Actor::GetPosition() const
@@ -148,6 +147,33 @@ void Actor::ScreenWrap(const UpdateContext& aUpdateCtx)
 	else if (myPosition.y > screenMax.y)
 	{
 		myPosition.y -= screenMax.y;
+	}
+}
+
+void Actor::KeepInsideFence(const UpdateContext& aUpdateCtx)
+{
+	const Tga::Vector2f fenceMin = aUpdateCtx.myGameWold->GetFenceMin();
+	const Tga::Vector2f fenceMax = aUpdateCtx.myGameWold->GetFenceMax();
+
+	if (myPosition.x < fenceMin.x)
+	{
+		myPosition.x = fenceMin.x;
+		myVel.x = 0.f;
+	}
+	else if (myPosition.x > fenceMax.x)
+	{
+		myPosition.x = fenceMax.x;
+		myVel.x = 0.f;
+	}
+	if (myPosition.y < fenceMin.y)
+	{
+		myPosition.y = fenceMin.y;
+		myVel.y = 0.f;
+	}
+	else if (myPosition.y > fenceMax.y)
+	{
+		myPosition.y = fenceMax.y;
+		myVel.y = 0.f;
 	}
 }
 

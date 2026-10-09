@@ -100,3 +100,58 @@ bool AI::PollingStation::IsBanditHiding(Tga::Vector2f* outHidingSpot) const
 	}
 	return false;
 }
+
+void AI::PollingStation::SetPreys(std::vector<Actor*> aPreys)
+{
+	myPreys = std::move(aPreys);
+}
+
+void AI::PollingStation::SetPredators(std::vector<Actor*> aPredators)
+{
+	myPredators = std::move(aPredators);
+}
+
+Actor* AI::PollingStation::GetClosestPrey(const Tga::Vector2f& aPosition, float aRange) const
+{
+	return GetClosestActor(myPreys, aPosition, aRange);
+}
+
+Actor* AI::PollingStation::GetClosestPredator(const Tga::Vector2f& aPosition, float aRange) const
+{
+	return GetClosestActor(myPredators, aPosition, aRange);
+}
+
+Actor* AI::PollingStation::GetClosestActor(const std::vector<Actor*>& aActors, const Tga::Vector2f& aPosition,
+                                           float aRange) const
+{
+	Actor* closest = nullptr;
+	float closestDistSqr = aRange * aRange;
+	for (Actor* actor : aActors)
+	{
+		if (actor->IsDead())
+		{
+			continue;
+		}
+
+		const float distSqr = (actor->GetPosition() - aPosition).LengthSqr();
+		if (distSqr < closestDistSqr)
+		{
+			closestDistSqr = distSqr;
+			closest = actor;
+		}
+	}
+	return closest;
+}
+
+int AI::PollingStation::GetAlivePredatorCount() const
+{
+	int count = 0;
+	for (Actor* predator : myPredators)
+	{
+		if (!predator->IsDead())
+		{
+			++count;
+		}
+	}
+	return count;
+}

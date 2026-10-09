@@ -47,6 +47,8 @@ namespace AI
 		eBandit,
 		eDog,
 		eDummy,
+		ePrey,
+		ePredator,
 	};
 
 	enum class eSteeringType
@@ -60,6 +62,7 @@ namespace AI
 	class Controller
 	{
 	public:
+		virtual ~Controller() = default;
 		virtual Tga::Vector2f Update(const UpdateContext& updateContext, const UpdateMoveContext& aUpdateMoveContext);
 		virtual void OnEvent([[maybe_unused]] const AIEvent& aEvent);
 
